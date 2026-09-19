@@ -164,7 +164,7 @@ function prepareConversation(messages) {
         return [];
     }
 
-    const recentMessages = messages.slice(-30);
+    const recentMessages = messages.slice(-10);
 
     return recentMessages
         .filter((message) => {
