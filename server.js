@@ -1,3 +1,4 @@
+```javascript
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -56,10 +57,7 @@ app.post("/api/chat", async (req, res) => {
 
 
         /*
-            Limitar o tamanho da conversa.
-
-            Isso evita que uma conversa muito longa
-            consuma muitos tokens.
+            Limitar o tamanho da conversa
         */
 
         const recentMessages =
@@ -78,6 +76,8 @@ app.post("/api/chat", async (req, res) => {
                 "Você é Sarah AI, uma assistente de inteligência artificial amigável, inteligente e útil. " +
                 "Responda de forma clara, natural e objetiva. " +
                 "Use o contexto das mensagens anteriores desta conversa para entender perguntas e referências do usuário. " +
+                "Quando a pergunta depender de informações atuais, notícias, acontecimentos recentes, preços, pessoas ou fatos que possam ter mudado, use a pesquisa na internet. " +
+                "Quando utilizar informações encontradas na internet, mencione claramente as fontes quando possível. " +
                 "Não invente informações sobre o usuário. " +
                 "Se você não souber algo, diga claramente que não sabe."
 
@@ -85,19 +85,36 @@ app.post("/api/chat", async (req, res) => {
 
 
         /*
-            Enviar a instrução + histórico
+            Enviar instrução + histórico + acesso à web
         */
 
         const completion =
             await client.chat.completions.create({
 
+                /*
+                    :online ativa o encaminhamento
+                    para pesquisa web quando suportado.
+                */
+
                 model:
                     process.env.BAZAARLINK_MODEL ||
-                    "auto:free",
+                    "auto:free:online",
+
 
                 messages: [
                     systemMessage,
                     ...recentMessages
+                ],
+
+
+                /*
+                    Ativar o plugin de pesquisa web.
+                */
+
+                plugins: [
+                    {
+                        id: "web"
+                    }
                 ]
 
             });
@@ -160,3 +177,4 @@ app.listen(PORT, () => {
     );
 
 });
+```
