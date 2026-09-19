@@ -1,10 +1,10 @@
 /* =====================================================
-   SARAH AI — SCRIPT PRINCIPAL
+   SARAH AI
 ===================================================== */
 
 
 /* =====================================================
-   ESTADO DA CONVERSA
+   ESTADO
 ===================================================== */
 
 let conversationHistory = [];
@@ -13,24 +13,30 @@ let isGenerating = false;
 
 
 /* =====================================================
-   ELEMENTOS DA INTERFACE
+   ELEMENTOS
 ===================================================== */
 
 const chatContainer =
-    document.getElementById("chatContainer");
+    document.getElementById("messages");
 
 const messageInput =
-    document.getElementById("messageInput");
+    document.getElementById("message");
 
 const sendButton =
-    document.getElementById("sendButton");
+    document.getElementById("send-button");
+
+const chatForm =
+    document.getElementById("chat-form");
 
 const welcomeScreen =
-    document.getElementById("welcomeScreen");
+    document.querySelector(".welcome");
+
+const sidebar =
+    document.getElementById("sidebar");
 
 
 /* =====================================================
-   ADICIONAR MENSAGEM NA INTERFACE
+   ADICIONAR MENSAGEM
 ===================================================== */
 
 function addMessage(
@@ -53,9 +59,9 @@ function addMessage(
         "message-bubble";
 
 
-    /*
-       Indicador de pesquisa
-    */
+    /* ---------------------------------------------
+       INDICADOR DE INTERNET
+    --------------------------------------------- */
 
     if (
         type === "assistant" &&
@@ -68,7 +74,7 @@ function addMessage(
         webIndicator.className =
             "web-source";
 
-        webIndicator.innerHTML =
+        webIndicator.textContent =
             "🌐 Pesquisado na internet";
 
         messageBubble.appendChild(
@@ -78,9 +84,9 @@ function addMessage(
     }
 
 
-    /*
-       Texto
-    */
+    /* ---------------------------------------------
+       TEXTO
+    --------------------------------------------- */
 
     const textElement =
         document.createElement("div");
@@ -107,21 +113,27 @@ function addMessage(
     );
 
 
-    /*
-       Scroll automático
-    */
-
-    chatContainer.scrollTop =
-        chatContainer.scrollHeight;
+    scrollToBottom();
 
 
     return textElement;
+}
+
+
+/* =====================================================
+   SCROLL
+===================================================== */
+
+function scrollToBottom() {
+
+    chatContainer.scrollTop =
+        chatContainer.scrollHeight;
 
 }
 
 
 /* =====================================================
-   INDICADOR "SARAH ESTÁ PENSANDO"
+   "SARAH ESTÁ PENSANDO..."
 ===================================================== */
 
 function showThinking() {
@@ -133,7 +145,7 @@ function showThinking() {
         "message assistant thinking-message";
 
     thinking.id =
-        "thinkingMessage";
+        "thinking-message";
 
 
     thinking.innerHTML = `
@@ -141,11 +153,9 @@ function showThinking() {
         <div class="message-bubble">
 
             <div class="thinking-dots">
-
                 <span></span>
                 <span></span>
                 <span></span>
-
             </div>
 
         </div>
@@ -158,21 +168,19 @@ function showThinking() {
     );
 
 
-    chatContainer.scrollTop =
-        chatContainer.scrollHeight;
-
+    scrollToBottom();
 }
 
 
 /* =====================================================
-   REMOVER INDICADOR
+   REMOVER THINKING
 ===================================================== */
 
 function removeThinking() {
 
     const thinking =
         document.getElementById(
-            "thinkingMessage"
+            "thinking-message"
         );
 
     if (thinking) {
@@ -204,9 +212,9 @@ async function sendMessage() {
     }
 
 
-    /*
-       Limpar input
-    */
+    /* ---------------------------------------------
+       LIMPAR INPUT
+    --------------------------------------------- */
 
     messageInput.value = "";
 
@@ -214,9 +222,9 @@ async function sendMessage() {
         "auto";
 
 
-    /*
-       Esconder tela inicial
-    */
+    /* ---------------------------------------------
+       ESCONDER WELCOME
+    --------------------------------------------- */
 
     if (welcomeScreen) {
 
@@ -226,9 +234,9 @@ async function sendMessage() {
     }
 
 
-    /*
-       Mostrar mensagem do usuário
-    */
+    /* ---------------------------------------------
+       MOSTRAR MENSAGEM DO USUÁRIO
+    --------------------------------------------- */
 
     addMessage(
         text,
@@ -236,9 +244,9 @@ async function sendMessage() {
     );
 
 
-    /*
-       Guardar mensagem
-    */
+    /* ---------------------------------------------
+       GUARDAR HISTÓRICO
+    --------------------------------------------- */
 
     conversationHistory.push({
 
@@ -249,15 +257,13 @@ async function sendMessage() {
     });
 
 
-    /*
-       Estado de carregamento
-    */
+    /* ---------------------------------------------
+       ESTADO
+    --------------------------------------------- */
 
     isGenerating = true;
 
-
-    sendButton.disabled =
-        true;
+    sendButton.disabled = true;
 
 
     showThinking();
@@ -265,9 +271,9 @@ async function sendMessage() {
 
     try {
 
-        /* ---------------------------------------------
-           PEDIDO AO SERVIDOR
-        --------------------------------------------- */
+        /* =============================================
+           ENVIAR PARA O SERVIDOR
+        ============================================= */
 
         const response =
             await fetch(
@@ -277,10 +283,8 @@ async function sendMessage() {
                     method: "POST",
 
                     headers: {
-
                         "Content-Type":
                             "application/json"
-
                     },
 
                     body: JSON.stringify({
@@ -294,40 +298,73 @@ async function sendMessage() {
             );
 
 
+        /* =============================================
+           VERIFICAR RESPOSTA
+        ============================================= */
+
         if (!response.ok) {
 
+            let errorMessage =
+                "Erro no servidor.";
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                if (errorData.error) {
+
+                    errorMessage =
+                        errorData.error;
+
+                }
+
+            } catch {
+
+                // ignora erro ao ler JSON
+
+            }
+
             throw new Error(
-                "Erro no servidor."
+                errorMessage
             );
 
         }
 
 
-        /*
-           Streaming
-        */
+        /* =============================================
+           VERIFICAR STREAMING
+        ============================================= */
+
+        if (!response.body) {
+
+            throw new Error(
+                "O servidor não enviou uma resposta."
+            );
+
+        }
+
 
         const reader =
             response.body.getReader();
 
 
         const decoder =
-            new TextDecoder();
+            new TextDecoder("utf-8");
 
 
         let buffer = "";
 
         let fullResponse = "";
 
-        let assistantTextElement =
-            null;
+        let assistantTextElement = null;
 
         let webSearch = false;
 
 
-        /* ---------------------------------------------
+        /* =============================================
            RECEBER STREAM
-        --------------------------------------------- */
+        ============================================= */
 
         while (true) {
 
@@ -338,13 +375,11 @@ async function sendMessage() {
 
 
             if (done) {
+
                 break;
+
             }
 
-
-            /*
-               Converter bytes → texto
-            */
 
             buffer +=
                 decoder.decode(
@@ -355,26 +390,21 @@ async function sendMessage() {
                 );
 
 
-            /*
-               Separar eventos SSE
-            */
+            /* -----------------------------------------
+               SEPARAR EVENTOS SSE
+            ----------------------------------------- */
 
             const events =
                 buffer.split("\n\n");
 
 
-            /*
-               Guardar último pedaço
-               caso esteja incompleto
-            */
-
             buffer =
                 events.pop();
 
 
-            /*
-               Processar eventos
-            */
+            /* -----------------------------------------
+               PROCESSAR EVENTOS
+            ----------------------------------------- */
 
             for (
                 const event of events
@@ -398,4 +428,408 @@ async function sendMessage() {
 
                 const jsonText =
                     line
-                       
+                        .substring(5)
+                        .trim();
+
+
+                if (!jsonText) {
+                    continue;
+                }
+
+
+                let data;
+
+
+                try {
+
+                    data =
+                        JSON.parse(
+                            jsonText
+                        );
+
+                } catch (error) {
+
+                    console.warn(
+                        "Evento inválido:",
+                        jsonText
+                    );
+
+                    continue;
+
+                }
+
+
+                /* =====================================
+                   INÍCIO
+                ===================================== */
+
+                if (
+                    data.type === "start"
+                ) {
+
+                    webSearch =
+                        Boolean(
+                            data.webSearch
+                        );
+
+
+                    removeThinking();
+
+
+                    assistantTextElement =
+                        addMessage(
+                            "",
+                            "assistant",
+                            webSearch
+                        );
+
+                }
+
+
+                /* =====================================
+                   TEXTO
+                ===================================== */
+
+                else if (
+                    data.type === "text"
+                ) {
+
+                    removeThinking();
+
+
+                    if (
+                        !assistantTextElement
+                    ) {
+
+                        assistantTextElement =
+                            addMessage(
+                                "",
+                                "assistant",
+                                webSearch
+                            );
+
+                    }
+
+
+                    assistantTextElement.textContent +=
+                        data.content;
+
+
+                    fullResponse +=
+                        data.content;
+
+
+                    scrollToBottom();
+
+                }
+
+
+                /* =====================================
+                   ERRO
+                ===================================== */
+
+                else if (
+                    data.type === "error"
+                ) {
+
+                    throw new Error(
+                        data.error ||
+                        "Erro ao gerar resposta."
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        /* =============================================
+           GUARDAR RESPOSTA
+        ============================================= */
+
+        if (fullResponse) {
+
+            conversationHistory.push({
+
+                role: "assistant",
+
+                content: fullResponse
+
+            });
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Sarah AI:",
+            error
+        );
+
+
+        removeThinking();
+
+
+        addMessage(
+
+            "Desculpa, ocorreu um erro ao falar com o servidor.",
+
+            "assistant"
+
+        );
+
+    }
+
+
+    /* =============================================
+       FINALIZAR
+    ============================================= */
+
+    isGenerating = false;
+
+    sendButton.disabled = false;
+
+    messageInput.focus();
+
+}
+
+
+/* =====================================================
+   FORMULÁRIO
+===================================================== */
+
+if (chatForm) {
+
+    chatForm.addEventListener(
+        "submit",
+        function(event) {
+
+            event.preventDefault();
+
+            sendMessage();
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+if (messageInput) {
+
+    messageInput.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+
+            }
+
+        }
+    );
+
+
+    /* ---------------------------------------------
+       AUTO RESIZE
+    --------------------------------------------- */
+
+    messageInput.addEventListener(
+        "input",
+        function() {
+
+            this.style.height =
+                "auto";
+
+            this.style.height =
+                this.scrollHeight + "px";
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   NOVO CHAT
+===================================================== */
+
+function newChat() {
+
+    conversationHistory = [];
+
+
+    chatContainer.innerHTML = "";
+
+
+    /* Recriar welcome */
+
+    const welcome =
+        document.createElement("div");
+
+    welcome.className =
+        "welcome";
+
+    welcome.innerHTML = `
+
+        <div class="welcome-logo">
+            S
+        </div>
+
+        <h1>
+            Olá, eu sou a Sarah.
+        </h1>
+
+        <p>
+            Sua assistente de inteligência artificial.
+        </p>
+
+        <div class="suggestions">
+
+            <button
+                onclick="useSuggestion('Explique-me um assunto de forma simples')"
+            >
+                <span>💡</span>
+
+                <div>
+                    <strong>Aprender</strong>
+                    <small>
+                        Explique um assunto para mim
+                    </small>
+                </div>
+
+            </button>
+
+
+            <button
+                onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
+            >
+                <span>✨</span>
+
+                <div>
+                    <strong>Criar</strong>
+                    <small>
+                        Ajude-me com uma ideia
+                    </small>
+                </div>
+
+            </button>
+
+
+            <button
+                onclick="useSuggestion('Pesquise e explique este assunto para mim')"
+            >
+                <span>🔎</span>
+
+                <div>
+                    <strong>Explorar</strong>
+                    <small>
+                        Quero descobrir algo novo
+                    </small>
+                </div>
+
+            </button>
+
+
+            <button
+                onclick="useSuggestion('Ajude-me a resolver este problema')"
+            >
+                <span>🧠</span>
+
+                <div>
+                    <strong>Resolver</strong>
+                    <small>
+                        Ajude-me com um problema
+                    </small>
+                </div>
+
+            </button>
+
+        </div>
+
+    `;
+
+
+    chatContainer.appendChild(
+        welcome
+    );
+
+
+    messageInput.value = "";
+
+    messageInput.style.height =
+        "auto";
+
+
+    messageInput.focus();
+
+}
+
+
+/* =====================================================
+   SUGESTÕES
+===================================================== */
+
+function useSuggestion(text) {
+
+    messageInput.value =
+        text;
+
+
+    messageInput.focus();
+
+
+    messageInput.style.height =
+        "auto";
+
+    messageInput.style.height =
+        messageInput.scrollHeight +
+        "px";
+
+}
+
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+function toggleSidebar() {
+
+    if (!sidebar) {
+        return;
+    }
+
+
+    sidebar.classList.toggle(
+        "open"
+    );
+
+}
+
+
+/* =====================================================
+   EXPOR FUNÇÕES PARA O HTML
+===================================================== */
+
+window.sendMessage =
+    sendMessage;
+
+window.newChat =
+    newChat;
+
+window.useSuggestion =
+    useSuggestion;
+
+window.toggleSidebar =
+    toggleSidebar;
