@@ -1,18 +1,25 @@
 const form = document.getElementById("chat-form");
+
 const input = document.getElementById("message");
+
 const messages = document.getElementById("messages");
+
 const sendButton = document.getElementById("send-button");
+
 
 /*
     HISTÓRICO DA CONVERSA
 
-    Guarda todas as mensagens enquanto
-    esta página estiver aberta.
+    Fica disponível enquanto a página
+    estiver aberta.
 */
+
 let conversationHistory = [];
 
 
-/* ENVIAR MENSAGEM */
+/* =========================
+   ENVIAR MENSAGEM
+========================= */
 
 form.addEventListener("submit", async (event) => {
 
@@ -23,25 +30,38 @@ form.addEventListener("submit", async (event) => {
     if (!message) return;
 
 
-    // Mostrar mensagem do usuário
+    /* Mostrar mensagem do usuário */
+
     addMessage(message, "user");
 
+
     input.value = "";
+
     input.style.height = "auto";
+
 
     sendButton.disabled = true;
 
 
-    // Adicionar ao histórico
+    /* Guardar no histórico */
+
     conversationHistory.push({
+
         role: "user",
+
         content: message
+
     });
 
 
+    /* Mensagem de processamento */
+
     const thinkingMessage = addMessage(
+
         "Sarah está pensando...",
+
         "ai"
+
     );
 
 
@@ -52,12 +72,13 @@ form.addEventListener("submit", async (event) => {
             method: "POST",
 
             headers: {
+
                 "Content-Type": "application/json"
+
             },
 
             body: JSON.stringify({
 
-                // Agora enviamos TODA a conversa
                 messages: conversationHistory
 
             })
@@ -74,21 +95,41 @@ form.addEventListener("submit", async (event) => {
         if (!response.ok) {
 
             throw new Error(
+
                 data.error ||
+
                 "Erro ao comunicar com a Sarah."
+
             );
 
         }
 
 
-        // Mostrar resposta
-        addMessage(data.reply, "ai");
+        /*
+            Mostrar resposta
+        */
+
+        addMessage(
+
+            data.reply,
+
+            "ai",
+
+            data.webSearch === true
+
+        );
 
 
-        // Guardar resposta da Sarah
+        /*
+            Guardar resposta da Sarah
+        */
+
         conversationHistory.push({
+
             role: "assistant",
+
             content: data.reply
+
         });
 
 
@@ -97,14 +138,20 @@ form.addEventListener("submit", async (event) => {
         thinkingMessage.remove();
 
 
-        // Se houve erro, removemos a última
-        // mensagem do usuário do histórico
+        /*
+            Remover última mensagem
+            caso tenha ocorrido erro
+        */
+
         conversationHistory.pop();
 
 
         addMessage(
+
             "Desculpa, ocorreu um erro ao tentar responder. Tenta novamente.",
+
             "ai"
+
         );
 
 
@@ -121,45 +168,87 @@ form.addEventListener("submit", async (event) => {
 });
 
 
-/* ADICIONAR MENSAGEM NA INTERFACE */
+/* =========================
+   ADICIONAR MENSAGEM
+========================= */
 
-function addMessage(text, type) {
+function addMessage(text, type, webSearch = false) {
 
     const message = document.createElement("div");
 
+
     message.className =
+
         type === "user"
+
             ? "message user-message"
+
             : "message ai-message";
+
+
+    const wrapper = document.createElement("div");
 
 
     const content = document.createElement("div");
 
+
     content.className = "message-content";
+
 
     content.textContent = text;
 
 
-    message.appendChild(content);
+    wrapper.appendChild(content);
+
+
+    /*
+        Aviso de pesquisa web
+    */
+
+    if (webSearch && type === "ai") {
+
+        const webIndicator =
+            document.createElement("div");
+
+
+        webIndicator.className = "web-source";
+
+
+        webIndicator.textContent =
+            "🌐 Pesquisado na internet";
+
+
+        wrapper.appendChild(webIndicator);
+
+    }
+
+
+    message.appendChild(wrapper);
+
 
     messages.appendChild(message);
 
 
     messages.scrollTo({
+
         top: messages.scrollHeight,
+
         behavior: "smooth"
+
     });
 
 
     return message;
+
 }
 
 
-/* NOVO CHAT */
+/* =========================
+   NOVO CHAT
+========================= */
 
 function newChat() {
 
-    // Apagar memória da conversa atual
     conversationHistory = [];
 
 
@@ -179,58 +268,105 @@ function newChat() {
                 Sua assistente de inteligência artificial.
             </p>
 
-
             <div class="suggestions">
 
-                <button onclick="useSuggestion('Explique-me um assunto de forma simples')">
+                <button
+                    onclick="useSuggestion(
+                        'Explique-me um assunto de forma simples'
+                    )"
+                >
+
                     <span>💡</span>
 
                     <div>
+
                         <strong>Aprender</strong>
-                        <small>Explique um assunto para mim</small>
+
+                        <small>
+                            Explique um assunto para mim
+                        </small>
+
                     </div>
+
                 </button>
 
 
-                <button onclick="useSuggestion('Ajude-me a criar uma ideia criativa')">
+                <button
+                    onclick="useSuggestion(
+                        'Ajude-me a criar uma ideia criativa'
+                    )"
+                >
+
                     <span>✨</span>
 
                     <div>
+
                         <strong>Criar</strong>
-                        <small>Ajude-me com uma ideia</small>
+
+                        <small>
+                            Ajude-me com uma ideia
+                        </small>
+
                     </div>
+
                 </button>
 
 
-                <button onclick="useSuggestion('Pesquise e explique este assunto para mim')">
+                <button
+                    onclick="useSuggestion(
+                        'Pesquise e explique este assunto para mim'
+                    )"
+                >
+
                     <span>🔎</span>
 
                     <div>
+
                         <strong>Explorar</strong>
-                        <small>Quero descobrir algo novo</small>
+
+                        <small>
+                            Quero descobrir algo novo
+                        </small>
+
                     </div>
+
                 </button>
 
 
-                <button onclick="useSuggestion('Ajude-me a resolver este problema')">
+                <button
+                    onclick="useSuggestion(
+                        'Ajude-me a resolver este problema'
+                    )"
+                >
+
                     <span>🧠</span>
 
                     <div>
+
                         <strong>Resolver</strong>
-                        <small>Ajude-me com um problema</small>
+
+                        <small>
+                            Ajude-me com um problema
+                        </small>
+
                     </div>
+
                 </button>
 
             </div>
 
         </div>
+
     `;
 
     input.focus();
+
 }
 
 
-/* SUGESTÕES */
+/* =========================
+   SUGESTÕES
+========================= */
 
 function useSuggestion(text) {
 
@@ -241,42 +377,67 @@ function useSuggestion(text) {
     input.style.height = "auto";
 
     input.style.height =
-        Math.min(input.scrollHeight, 160) + "px";
+
+        Math.min(
+
+            input.scrollHeight,
+
+            160
+
+        ) + "px";
 
 }
 
 
-/* SIDEBAR */
+/* =========================
+   SIDEBAR
+========================= */
 
 function toggleSidebar() {
 
     const sidebar =
         document.getElementById("sidebar");
 
+
     sidebar.classList.toggle("open");
 
 }
 
 
-/* TEXTAREA */
+/* =========================
+   TEXTAREA
+========================= */
 
 input.addEventListener("input", () => {
 
     input.style.height = "auto";
 
+
     input.style.height =
-        Math.min(input.scrollHeight, 160) + "px";
+
+        Math.min(
+
+            input.scrollHeight,
+
+            160
+
+        ) + "px";
 
 });
 
 
-/* ENTER */
+/* =========================
+   ENTER
+========================= */
 
 input.addEventListener("keydown", (event) => {
 
     if (
+
         event.key === "Enter" &&
+
         !event.shiftKey
+
     ) {
 
         event.preventDefault();
