@@ -587,4 +587,298 @@ app.post(
 
                 temperature:
                     route.reasoning
-                        ? 0.
+                        ? 0.35
+                        : 0.65,
+
+                stream:
+                    true,
+
+                transforms:
+                    ["middle-out"]
+            };
+
+
+            /* =============================================
+               REASONING
+               ============================================= */
+
+            if (route.reasoning) {
+
+                requestOptions.reasoning_effort =
+                    route.reasoningEffort;
+            }
+
+
+            /* =============================================
+               WEB SEARCH
+               ============================================= */
+
+            if (webSearch) {
+
+                requestOptions.plugins = [
+                    {
+                        id: "web"
+                    }
+                ];
+            }
+
+
+            /* =============================================
+               HEADERS SSE
+               ============================================= */
+
+            res.setHeader(
+                "Content-Type",
+                "text/event-stream"
+            );
+
+            res.setHeader(
+                "Cache-Control",
+                "no-cache, no-transform"
+            );
+
+            res.setHeader(
+                "Connection",
+                "keep-alive"
+            );
+
+            res.setHeader(
+                "X-Accel-Buffering",
+                "no"
+            );
+
+
+            if (
+                typeof res.flushHeaders ===
+                "function"
+            ) {
+
+                res.flushHeaders();
+            }
+
+
+            /* =============================================
+               AVISAR FRONTEND
+               ============================================= */
+
+            res.write(
+                `data: ${JSON.stringify({
+
+                    type: "start",
+
+                    webSearch,
+
+                    reasoning:
+                        route.reasoning
+
+                })}\n\n`
+            );
+
+
+            console.log(
+                `[Sarah] modelo=${route.model} | ` +
+                `raciocinio=${route.reasoning} | ` +
+                `web=${webSearch}`
+            );
+
+
+            /* =============================================
+               BAZAARLINK
+               ============================================= */
+
+            const stream =
+                await client.chat.completions.create(
+                    requestOptions
+                );
+
+
+            /* =============================================
+               STREAM
+               ============================================= */
+
+            for await (
+                const chunk
+                of stream
+            ) {
+
+                const content =
+                    chunk
+                        .choices?.[0]
+                        ?.delta
+                        ?.content;
+
+
+                if (content) {
+
+                    res.write(
+
+                        `data: ${JSON.stringify({
+
+                            type: "text",
+
+                            content
+
+                        })}\n\n`
+
+                    );
+                }
+            }
+
+
+            /* =============================================
+               DONE
+               ============================================= */
+
+            res.write(
+
+                `data: ${JSON.stringify({
+
+                    type: "done"
+
+                })}\n\n`
+
+            );
+
+
+            res.end();
+
+
+        } catch (error) {
+
+            console.error(
+                "Erro da BazaarLink:",
+                error
+            );
+
+
+            const errorMessage =
+                error?.message ||
+                "Erro desconhecido.";
+
+
+            console.error(
+                "Detalhes:",
+                errorMessage
+            );
+
+
+            /* =============================================
+               ERROR BEFORE SSE
+               ============================================= */
+
+            if (!res.headersSent) {
+
+                return res.status(500).json({
+
+                    error:
+                        "Não foi possível obter uma resposta da Sarah AI."
+
+                });
+            }
+
+
+            /* =============================================
+               ERROR DURING SSE
+               ============================================= */
+
+            res.write(
+
+                `data: ${JSON.stringify({
+
+                    type: "error",
+
+                    error:
+                        "Não foi possível obter uma resposta da Sarah AI."
+
+                })}\n\n`
+
+            );
+
+
+            res.end();
+        }
+    }
+);
+
+
+/* =========================================================
+   HEALTH CHECK
+   ========================================================= */
+
+app.get(
+    "/api/health",
+    (req, res) => {
+
+        res.json({
+
+            status: "online",
+
+            service: "Sarah AI",
+
+            models: {
+
+                fast:
+                    FAST_MODEL,
+
+                smart:
+                    SMART_MODEL,
+
+                fallback:
+                    FALLBACK_MODEL
+
+            }
+
+        });
+    }
+);
+
+
+/* =========================================================
+   START SERVER
+   ========================================================= */
+
+app.listen(
+    PORT,
+    () => {
+
+        console.log(
+            "========================================"
+        );
+
+        console.log(
+            "Sarah AI está rodando"
+        );
+
+        console.log(
+            `Porta: ${PORT}`
+        );
+
+        console.log(
+            `Modelo rápido: ${FAST_MODEL}`
+        );
+
+        console.log(
+            `Modelo inteligente: ${SMART_MODEL}`
+        );
+
+        console.log(
+            `Fallback: ${FALLBACK_MODEL}`
+        );
+
+        console.log(
+            "Pesquisa web: automática"
+        );
+
+        console.log(
+            "Raciocínio: automático"
+        );
+
+        console.log(
+            "Contexto: últimas 20 mensagens"
+        );
+
+        console.log(
+            "========================================"
+        );
+    }
+);
