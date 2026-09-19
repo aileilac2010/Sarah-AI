@@ -1,14 +1,8 @@
 /* =====================================================
-   SARAH AI
-===================================================== */
-
-
-/* =====================================================
-   ESTADO
+   SARAH AI — SCRIPT PRINCIPAL
 ===================================================== */
 
 let conversationHistory = [];
-
 let isGenerating = false;
 
 
@@ -36,6 +30,19 @@ const sidebar =
 
 
 /* =====================================================
+   SCROLL
+===================================================== */
+
+function scrollToBottom() {
+
+    if (!chatContainer) return;
+
+    chatContainer.scrollTop =
+        chatContainer.scrollHeight;
+}
+
+
+/* =====================================================
    ADICIONAR MENSAGEM
 ===================================================== */
 
@@ -44,6 +51,9 @@ function addMessage(
     type,
     webSearch = false
 ) {
+
+    if (!chatContainer) return null;
+
 
     const messageWrapper =
         document.createElement("div");
@@ -59,9 +69,7 @@ function addMessage(
         "message-bubble";
 
 
-    /* ---------------------------------------------
-       INDICADOR DE INTERNET
-    --------------------------------------------- */
+    /* Pesquisa na internet */
 
     if (
         type === "assistant" &&
@@ -80,13 +88,10 @@ function addMessage(
         messageBubble.appendChild(
             webIndicator
         );
-
     }
 
 
-    /* ---------------------------------------------
-       TEXTO
-    --------------------------------------------- */
+    /* Texto */
 
     const textElement =
         document.createElement("div");
@@ -102,11 +107,9 @@ function addMessage(
         textElement
     );
 
-
     messageWrapper.appendChild(
         messageBubble
     );
-
 
     chatContainer.appendChild(
         messageWrapper
@@ -121,22 +124,13 @@ function addMessage(
 
 
 /* =====================================================
-   SCROLL
-===================================================== */
-
-function scrollToBottom() {
-
-    chatContainer.scrollTop =
-        chatContainer.scrollHeight;
-
-}
-
-
-/* =====================================================
-   "SARAH ESTÁ PENSANDO..."
+   PENSANDO...
 ===================================================== */
 
 function showThinking() {
+
+    if (!chatContainer) return;
+
 
     const thinking =
         document.createElement("div");
@@ -149,17 +143,13 @@ function showThinking() {
 
 
     thinking.innerHTML = `
-
         <div class="message-bubble">
-
             <div class="thinking-dots">
                 <span></span>
                 <span></span>
                 <span></span>
             </div>
-
         </div>
-
     `;
 
 
@@ -173,7 +163,7 @@ function showThinking() {
 
 
 /* =====================================================
-   REMOVER THINKING
+   REMOVER PENSANDO
 ===================================================== */
 
 function removeThinking() {
@@ -184,11 +174,8 @@ function removeThinking() {
         );
 
     if (thinking) {
-
         thinking.remove();
-
     }
-
 }
 
 
@@ -203,6 +190,15 @@ async function sendMessage() {
     }
 
 
+    if (!messageInput) {
+        console.error(
+            "Sarah AI: campo de mensagem não encontrado."
+        );
+
+        return;
+    }
+
+
     const text =
         messageInput.value.trim();
 
@@ -212,9 +208,7 @@ async function sendMessage() {
     }
 
 
-    /* ---------------------------------------------
-       LIMPAR INPUT
-    --------------------------------------------- */
+    /* Limpar campo */
 
     messageInput.value = "";
 
@@ -222,21 +216,16 @@ async function sendMessage() {
         "auto";
 
 
-    /* ---------------------------------------------
-       ESCONDER WELCOME
-    --------------------------------------------- */
+    /* Esconder tela inicial */
 
     if (welcomeScreen) {
 
         welcomeScreen.style.display =
             "none";
-
     }
 
 
-    /* ---------------------------------------------
-       MOSTRAR MENSAGEM DO USUÁRIO
-    --------------------------------------------- */
+    /* Mostrar mensagem do usuário */
 
     addMessage(
         text,
@@ -244,9 +233,7 @@ async function sendMessage() {
     );
 
 
-    /* ---------------------------------------------
-       GUARDAR HISTÓRICO
-    --------------------------------------------- */
+    /* Guardar conversa */
 
     conversationHistory.push({
 
@@ -257,13 +244,12 @@ async function sendMessage() {
     });
 
 
-    /* ---------------------------------------------
-       ESTADO
-    --------------------------------------------- */
-
     isGenerating = true;
 
-    sendButton.disabled = true;
+
+    if (sendButton) {
+        sendButton.disabled = true;
+    }
 
 
     showThinking();
@@ -271,9 +257,9 @@ async function sendMessage() {
 
     try {
 
-        /* =============================================
-           ENVIAR PARA O SERVIDOR
-        ============================================= */
+        /* ==========================================
+           PEDIDO AO SERVIDOR
+        ========================================== */
 
         const response =
             await fetch(
@@ -298,9 +284,9 @@ async function sendMessage() {
             );
 
 
-        /* =============================================
-           VERIFICAR RESPOSTA
-        ============================================= */
+        /* ==========================================
+           ERRO HTTP
+        ========================================== */
 
         if (!response.ok) {
 
@@ -316,32 +302,25 @@ async function sendMessage() {
 
                     errorMessage =
                         errorData.error;
-
                 }
 
-            } catch {
-
-                // ignora erro ao ler JSON
-
-            }
+            } catch (e) {}
 
             throw new Error(
                 errorMessage
             );
-
         }
 
 
-        /* =============================================
-           VERIFICAR STREAMING
-        ============================================= */
+        /* ==========================================
+           STREAM
+        ========================================== */
 
         if (!response.body) {
 
             throw new Error(
                 "O servidor não enviou uma resposta."
             );
-
         }
 
 
@@ -350,34 +329,36 @@ async function sendMessage() {
 
 
         const decoder =
-            new TextDecoder("utf-8");
+            new TextDecoder(
+                "utf-8"
+            );
 
 
         let buffer = "";
 
         let fullResponse = "";
 
-        let assistantTextElement = null;
+        let assistantTextElement =
+            null;
 
         let webSearch = false;
 
 
-        /* =============================================
-           RECEBER STREAM
-        ============================================= */
+        /* ==========================================
+           RECEBER RESPOSTA
+        ========================================== */
 
         while (true) {
 
             const {
                 value,
                 done
-            } = await reader.read();
+            } =
+                await reader.read();
 
 
             if (done) {
-
                 break;
-
             }
 
 
@@ -390,10 +371,6 @@ async function sendMessage() {
                 );
 
 
-            /* -----------------------------------------
-               SEPARAR EVENTOS SSE
-            ----------------------------------------- */
-
             const events =
                 buffer.split("\n\n");
 
@@ -402,9 +379,9 @@ async function sendMessage() {
                 events.pop();
 
 
-            /* -----------------------------------------
+            /* ======================================
                PROCESSAR EVENTOS
-            ----------------------------------------- */
+            ====================================== */
 
             for (
                 const event of events
@@ -455,16 +432,16 @@ async function sendMessage() {
                     );
 
                     continue;
-
                 }
 
 
-                /* =====================================
+                /* ==================================
                    INÍCIO
-                ===================================== */
+                ================================== */
 
                 if (
-                    data.type === "start"
+                    data.type ===
+                    "start"
                 ) {
 
                     webSearch =
@@ -482,16 +459,16 @@ async function sendMessage() {
                             "assistant",
                             webSearch
                         );
-
                 }
 
 
-                /* =====================================
+                /* ==================================
                    TEXTO
-                ===================================== */
+                ================================== */
 
                 else if (
-                    data.type === "text"
+                    data.type ===
+                    "text"
                 ) {
 
                     removeThinking();
@@ -507,11 +484,11 @@ async function sendMessage() {
                                 "assistant",
                                 webSearch
                             );
-
                     }
 
 
-                    assistantTextElement.textContent +=
+                    assistantTextElement
+                        .textContent +=
                         data.content;
 
 
@@ -520,23 +497,22 @@ async function sendMessage() {
 
 
                     scrollToBottom();
-
                 }
 
 
-                /* =====================================
+                /* ==================================
                    ERRO
-                ===================================== */
+                ================================== */
 
                 else if (
-                    data.type === "error"
+                    data.type ===
+                    "error"
                 ) {
 
                     throw new Error(
                         data.error ||
                         "Erro ao gerar resposta."
                     );
-
                 }
 
             }
@@ -544,9 +520,9 @@ async function sendMessage() {
         }
 
 
-        /* =============================================
-           GUARDAR RESPOSTA
-        ============================================= */
+        /* ==========================================
+           GUARDAR RESPOSTA DA SARAH
+        ========================================== */
 
         if (fullResponse) {
 
@@ -557,7 +533,6 @@ async function sendMessage() {
                 content: fullResponse
 
             });
-
         }
 
 
@@ -573,25 +548,28 @@ async function sendMessage() {
 
 
         addMessage(
-
             "Desculpa, ocorreu um erro ao falar com o servidor.",
-
             "assistant"
-
         );
 
     }
 
 
-    /* =============================================
+    /* ==========================================
        FINALIZAR
-    ============================================= */
+    ========================================== */
 
     isGenerating = false;
 
-    sendButton.disabled = false;
 
-    messageInput.focus();
+    if (sendButton) {
+        sendButton.disabled = false;
+    }
+
+
+    if (messageInput) {
+        messageInput.focus();
+    }
 
 }
 
@@ -612,12 +590,11 @@ if (chatForm) {
 
         }
     );
-
 }
 
 
 /* =====================================================
-   INPUT
+   ENTER
 ===================================================== */
 
 if (messageInput) {
@@ -634,16 +611,13 @@ if (messageInput) {
                 event.preventDefault();
 
                 sendMessage();
-
             }
 
         }
     );
 
 
-    /* ---------------------------------------------
-       AUTO RESIZE
-    --------------------------------------------- */
+    /* Auto resize */
 
     messageInput.addEventListener(
         "input",
@@ -653,7 +627,8 @@ if (messageInput) {
                 "auto";
 
             this.style.height =
-                this.scrollHeight + "px";
+                this.scrollHeight +
+                "px";
 
         }
     );
@@ -670,16 +645,23 @@ function newChat() {
     conversationHistory = [];
 
 
+    if (!chatContainer) {
+        return;
+    }
+
+
     chatContainer.innerHTML = "";
 
 
-    /* Recriar welcome */
-
     const welcome =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     welcome.className =
         "welcome";
+
 
     welcome.innerHTML = `
 
@@ -688,7 +670,7 @@ function newChat() {
         </div>
 
         <h1>
-            Olá, eu sou a Sarah.
+            Olá, eu sou a <span>Sarah.</span>
         </h1>
 
         <p>
@@ -698,66 +680,69 @@ function newChat() {
         <div class="suggestions">
 
             <button
+                type="button"
                 onclick="useSuggestion('Explique-me um assunto de forma simples')"
             >
                 <span>💡</span>
 
-                <div>
-                    <strong>Aprender</strong>
-                    <small>
-                        Explique um assunto para mim
-                    </small>
-                </div>
+                <strong>
+                    Aprender
+                </strong>
 
+                <small>
+                    Explique um assunto para mim
+                </small>
             </button>
 
 
             <button
+                type="button"
                 onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
             >
                 <span>✨</span>
 
-                <div>
-                    <strong>Criar</strong>
-                    <small>
-                        Ajude-me com uma ideia
-                    </small>
-                </div>
+                <strong>
+                    Criar
+                </strong>
 
+                <small>
+                    Ajude-me com uma ideia criativa
+                </small>
             </button>
 
 
             <button
+                type="button"
                 onclick="useSuggestion('Pesquise e explique este assunto para mim')"
             >
                 <span>🔎</span>
 
-                <div>
-                    <strong>Explorar</strong>
-                    <small>
-                        Quero descobrir algo novo
-                    </small>
-                </div>
+                <strong>
+                    Explorar
+                </strong>
 
+                <small>
+                    Quero descobrir algo novo
+                </small>
             </button>
 
 
             <button
+                type="button"
                 onclick="useSuggestion('Ajude-me a resolver este problema')"
             >
                 <span>🧠</span>
 
-                <div>
-                    <strong>Resolver</strong>
-                    <small>
-                        Ajude-me com um problema
-                    </small>
-                </div>
+                <strong>
+                    Resolver
+                </strong>
 
+                <small>
+                    Ajude-me com um problema
+                </small>
             </button>
 
         </div>
-
     `;
 
 
@@ -766,22 +751,30 @@ function newChat() {
     );
 
 
-    messageInput.value = "";
+    if (messageInput) {
 
-    messageInput.style.height =
-        "auto";
+        messageInput.value = "";
 
+        messageInput.style.height =
+            "auto";
 
-    messageInput.focus();
+        messageInput.focus();
+
+    }
 
 }
 
 
 /* =====================================================
-   SUGESTÕES
+   SUGESTÃO
 ===================================================== */
 
 function useSuggestion(text) {
+
+    if (!messageInput) {
+        return;
+    }
+
 
     messageInput.value =
         text;
@@ -793,10 +786,10 @@ function useSuggestion(text) {
     messageInput.style.height =
         "auto";
 
+
     messageInput.style.height =
         messageInput.scrollHeight +
         "px";
-
 }
 
 
@@ -814,12 +807,11 @@ function toggleSidebar() {
     sidebar.classList.toggle(
         "open"
     );
-
 }
 
 
 /* =====================================================
-   EXPOR FUNÇÕES PARA O HTML
+   DISPONIBILIZAR FUNÇÕES PARA O HTML
 ===================================================== */
 
 window.sendMessage =
