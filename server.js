@@ -40,7 +40,7 @@ const client = new OpenAI({
 // MODELO
 // ==========================================
 
-const MODEL = "auto:free";
+const MODEL = "qwen/qwen3.7-flash";
 
 // ==========================================
 // SYSTEM PROMPT
