@@ -6,24 +6,22 @@ const OpenAI = require("openai");
 dotenv.config();
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
 
-/* =====================================================
-   CONFIGURAÇÕES
-===================================================== */
+/* =========================================================
+   MIDDLEWARE
+   ========================================================= */
 
 app.use(cors());
-
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 app.use(express.static("public"));
 
 
-/* =====================================================
+/* =========================================================
    BAZAARLINK
-===================================================== */
+   ========================================================= */
 
 const client = new OpenAI({
     apiKey: process.env.BAZAARLINK_API_KEY,
@@ -31,9 +29,33 @@ const client = new OpenAI({
 });
 
 
-/* =====================================================
-   DETECTAR SE A PERGUNTA PRECISA DE INTERNET
-===================================================== */
+/* =========================================================
+   MODELOS
+   =========================================================
+
+   Podemos alterar estes modelos pelo Render sem mexer
+   novamente no código.
+
+   Os valores abaixo correspondem aos modelos gratuitos
+   atualmente documentados pelo BazaarLink.
+   ========================================================= */
+
+const FAST_MODEL =
+    process.env.BAZAARLINK_FAST_MODEL ||
+    "qwen/qwen3.7-flash";
+
+const SMART_MODEL =
+    process.env.BAZAARLINK_SMART_MODEL ||
+    "deepseek/deepseek-v4-flash-0731free";
+
+const FALLBACK_MODEL =
+    process.env.BAZAARLINK_FALLBACK_MODEL ||
+    "qwen/qwen3.7-flash";
+
+
+/* =========================================================
+   DETECTAR PESQUISA NA INTERNET
+   ========================================================= */
 
 function needsWebSearch(message) {
 
@@ -42,55 +64,66 @@ function needsWebSearch(message) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
+
     const webKeywords = [
 
-        // Tempo / atualidade
+        /* Atualidade */
+
         "hoje",
         "agora",
         "atual",
         "atualmente",
         "recentemente",
+        "recente",
         "recentes",
+
+        /* Notícias */
+
+        "noticia",
+        "noticias",
         "ultima noticia",
         "ultimas noticias",
         "noticias de hoje",
         "noticias atuais",
+        "o que aconteceu",
 
-        // Pesquisa
+        /* Pesquisa */
+
         "pesquise",
         "pesquisa",
         "procure na internet",
         "pesquisa na internet",
         "pesquise na internet",
         "pesquisa online",
+        "procure online",
+        "veja na internet",
 
-        // Preços
+        /* Preços */
+
         "preco atual",
         "precos atuais",
         "quanto custa agora",
         "quanto esta custando",
         "quanto esta a custar",
 
-        // Mercado / câmbio
+        /* Economia */
+
         "cotacao",
         "cambio",
         "dolar hoje",
         "euro hoje",
+        "bitcoin hoje",
 
-        // Eventos
-        "o que aconteceu hoje",
-        "o que aconteceu ontem",
-        "ultimas novidades",
-        "novidades de hoje",
+        /* Política / cargos atuais */
 
-        // Informação que muda frequentemente
-        "quem e o atual",
-        "quem e a atual",
         "atual presidente",
         "atual primeiro ministro",
         "atual primeiro-ministro",
+        "quem e o atual",
+        "quem e a atual",
 
-        // Esportes
+        /* Esportes */
+
         "jogo de hoje",
         "jogos de hoje",
         "resultado de hoje",
@@ -98,304 +131,460 @@ function needsWebSearch(message) {
         "placar",
         "classificacao atual",
 
-        // Clima
+        /* Clima */
+
         "tempo hoje",
         "clima hoje",
         "previsao do tempo",
         "previsao para hoje",
 
-        // Datas
+        /* Próximos acontecimentos */
+
         "quando vai acontecer",
         "quando sera",
+        "quando sera a proxima",
         "quando e a proxima",
 
-        // Web explícita
+        /* Internet */
+
         "na internet",
         "online"
     ];
 
-    return webKeywords.some(keyword =>
-        text.includes(keyword)
+
+    return webKeywords.some(
+        keyword => text.includes(keyword)
     );
 }
 
 
-/* =====================================================
-   CHAT
-===================================================== */
-
-app.post("/api/chat", async (req, res) => {
-
-    try {
-
-        const { messages } = req.body;
-
-
-        /* ---------------------------------------------
-           VALIDAR MENSAGENS
-        --------------------------------------------- */
-
-        if (
-            !Array.isArray(messages) ||
-            messages.length === 0
-        ) {
-
-            return res.status(400).json({
-                error: "Nenhuma mensagem foi enviada."
-            });
-
-        }
-
-
-        /* ---------------------------------------------
-           PEGAR ÚLTIMA MENSAGEM DO USUÁRIO
-        --------------------------------------------- */
-
-        const lastUserMessage =
-            [...messages]
-                .reverse()
-                .find(message =>
-                    message.role === "user"
-                );
-
-
-        const userText =
-            lastUserMessage?.content || "";
-
-
-        /* ---------------------------------------------
-           DECIDIR SE PRECISA DE WEB
-        --------------------------------------------- */
-
-        const useWeb =
-            needsWebSearch(userText);
-
-
-        /* ---------------------------------------------
-           HISTÓRICO MENOR
-           
-           Isso reduz o contexto enviado para a API.
-        --------------------------------------------- */
-
-        const recentMessages =
-            messages.slice(-12);
-
-
-        /* ---------------------------------------------
-           PERSONALIDADE DA SARAH
-        --------------------------------------------- */
-
-        const systemMessage = {
-
-            role: "system",
-
-            content:
-
-                "Você é Sarah AI, uma assistente de inteligência artificial amigável, inteligente e útil. " +
-
-                "Responda de forma curta, direta e natural. " +
-
-                "Na maioria das perguntas, responda em no máximo 1 a 3 parágrafos curtos. " +
-
-                "Evite introduções desnecessárias, repetições e conclusões longas. " +
-
-                "Não explique mais do que foi perguntado. " +
-
-                "Use listas curtas quando forem úteis. " +
-
-                "Só dê respostas longas quando o usuário pedir explicitamente uma explicação detalhada. " +
-
-                "Use o contexto recente da conversa. " +
-
-                "Não invente informações. " +
-
-                "Se não souber algo, diga claramente que não sabe. " +
-
-                (
-
-                    useWeb
-
-                        ? "Esta pergunta pode depender de informações atuais. A pesquisa na internet foi ativada. Use-a quando necessário e baseie a resposta nas informações encontradas."
-
-                        : "Esta pergunta não necessita de pesquisa na internet. Responda usando o conhecimento disponível."
-                )
-
-        };
-
-
-        /* ---------------------------------------------
-           CONFIGURAÇÃO DO PEDIDO
-        --------------------------------------------- */
-
-        const requestOptions = {
-
-            model:
-                process.env.BAZAARLINK_MODEL ||
-                "auto:free",
-
-            messages: [
-                systemMessage,
-                ...recentMessages
-            ],
-
-            max_tokens: 180,
-
-            temperature: 0.7,
-
-            stream: true
-
-        };
-
-
-        /* ---------------------------------------------
-           WEB SOMENTE QUANDO NECESSÁRIO
-        --------------------------------------------- */
-
-        if (useWeb) {
-
-            requestOptions.plugins = [
-                {
-                    id: "web"
-                }
-            ];
-
-        }
-
-
-        /* ---------------------------------------------
-           CABEÇALHOS SSE
-        --------------------------------------------- */
-
-        res.setHeader(
-            "Content-Type",
-            "text/event-stream"
-        );
-
-        res.setHeader(
-            "Cache-Control",
-            "no-cache"
-        );
-
-        res.setHeader(
-            "Connection",
-            "keep-alive"
-        );
-
-        res.flushHeaders();
-
-
-        /* ---------------------------------------------
-           AVISAR FRONTEND SE WEB FOI ATIVADA
-        --------------------------------------------- */
-
-        res.write(
-            `data: ${JSON.stringify({
-                type: "start",
-                webSearch: useWeb
-            })}\n\n`
-        );
-
-
-        /* ---------------------------------------------
-           PEDIDO STREAMING À BAZAARLINK
-        --------------------------------------------- */
-
-        const stream =
-            await client.chat.completions.create(
-                requestOptions
-            );
-
-
-        /* ---------------------------------------------
-           RECEBER CADA PARTE DA RESPOSTA
-        --------------------------------------------- */
-
-        for await (const chunk of stream) {
-
-            const content =
-                chunk.choices?.[0]?.delta?.content;
-
-
-            if (content) {
-
-                res.write(
-                    `data: ${JSON.stringify({
-                        type: "text",
-                        content: content
-                    })}\n\n`
-                );
-
-            }
-
-        }
-
-
-        /* ---------------------------------------------
-           FINALIZAR STREAM
-        --------------------------------------------- */
-
-        res.write(
-            `data: ${JSON.stringify({
-                type: "done"
-            })}\n\n`
-        );
-
-        res.end();
-
-
-    } catch (error) {
-
-        console.error(
-            "Erro da BazaarLink:",
-            error
-        );
-
-
-        /*
-           Se ainda não começamos o SSE,
-           podemos devolver JSON normal.
-        */
-
-        if (!res.headersSent) {
-
-            return res.status(500).json({
-
-                error:
-                    "Não foi possível obter uma resposta da Sarah AI."
-
-            });
-
-        }
-
-
-        /*
-           Se o streaming já começou,
-           enviamos o erro como evento SSE.
-        */
-
-        res.write(
-            `data: ${JSON.stringify({
-                type: "error",
-                error:
-                    "Não foi possível obter uma resposta da Sarah AI."
-            })}\n\n`
-        );
-
-        res.end();
-
+/* =========================================================
+   DETECTAR PERGUNTA COMPLEXA
+   ========================================================= */
+
+function needsReasoning(message) {
+
+    const text = message
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+
+    const reasoningKeywords = [
+
+        /* Raciocínio */
+
+        "analise",
+        "analisa",
+        "analisar",
+        "compare",
+        "comparar",
+        "comparacao",
+        "explique detalhadamente",
+        "passo a passo",
+        "raciocine",
+        "raciocinio",
+        "justifique",
+        "justificar",
+        "por que",
+        "porque",
+
+        /* Matemática */
+
+        "calcule",
+        "calcular",
+        "equacao",
+        "equacao",
+        "problema matematico",
+        "matematica",
+        "probabilidade",
+        "estatistica",
+
+        /* Código */
+
+        "codigo",
+        "programacao",
+        "programar",
+        "javascript",
+        "python",
+        "html",
+        "css",
+        "node",
+        "api",
+        "debug",
+        "erro no codigo",
+        "bug",
+
+        /* Estudos */
+
+        "resolva",
+        "resolver",
+        "questao",
+        "exercicio",
+        "prova",
+        "teste",
+
+        /* Planejamento */
+
+        "planeje",
+        "planejamento",
+        "estrategia",
+        "estruture",
+        "estrutura",
+
+        /* Análise de texto */
+
+        "revise",
+        "revisar",
+        "critique",
+        "avaliar",
+        "avalie",
+        "investigue",
+
+        /* Explicações profundas */
+
+        "em detalhes",
+        "detalhadamente",
+        "profundamente",
+        "com exemplos"
+    ];
+
+
+    if (
+        reasoningKeywords.some(
+            keyword => text.includes(keyword)
+        )
+    ) {
+        return true;
     }
 
-});
+
+    /* Mensagens muito grandes normalmente precisam
+       de mais processamento */
+
+    if (message.length > 1200) {
+        return true;
+    }
 
 
-/* =====================================================
-   SERVIDOR
-===================================================== */
+    return false;
+}
 
-app.listen(PORT, () => {
 
-    console.log(
-        "Sarah AI rodando na porta " + PORT
-    );
+/* =========================================================
+   ESCOLHER MODELO
+   ========================================================= */
 
-});
+function chooseModel(message) {
+
+    const web =
+        needsWebSearch(message);
+
+    const reasoning =
+        needsReasoning(message);
+
+
+    /*
+       Pesquisa + pergunta complexa:
+       ainda usamos o modelo inteligente.
+    */
+
+    if (reasoning) {
+
+        return {
+            model: SMART_MODEL,
+            fallback: FALLBACK_MODEL,
+            reasoning: true,
+            reasoningEffort: "medium"
+        };
+    }
+
+
+    /*
+       Pergunta simples:
+       modelo rápido.
+    */
+
+    return {
+        model: FAST_MODEL,
+        fallback: FALLBACK_MODEL,
+        reasoning: false,
+        reasoningEffort: null
+    };
+}
+
+
+/* =========================================================
+   SISTEMA DA SARAH
+   ========================================================= */
+
+function createSystemMessage({
+    webSearch,
+    reasoning
+}) {
+
+    let prompt = `
+
+Você é Sarah AI, uma assistente de inteligência artificial
+inteligente, natural, útil e confiável.
+
+PERSONALIDADE:
+
+- Seja amigável e natural.
+- Fale como uma assistente moderna, não como um robô.
+- Responda em português quando o usuário falar português.
+- Adapte o nível da explicação ao usuário.
+- Não seja excessivamente formal.
+- Não repita a pergunta do usuário sem necessidade.
+- Não use introduções desnecessárias.
+- Vá diretamente ao ponto.
+
+QUALIDADE:
+
+- Não invente informações.
+- Se não souber alguma coisa, diga claramente.
+- Diferencie fatos de opiniões.
+- Quando houver várias possibilidades, explique as diferenças.
+- Use exemplos quando eles realmente ajudarem.
+- Em problemas matemáticos, mostre o raciocínio necessário.
+- Em programação, explique o erro e forneça código funcional quando apropriado.
+- Em perguntas escolares, explique de forma que o estudante consiga entender.
+- Em perguntas complexas, organize a resposta em partes.
+
+FORMATAÇÃO:
+
+- Use parágrafos curtos.
+- Use listas quando forem úteis.
+- Use títulos curtos quando a resposta for grande.
+- Evite textos enormes quando o usuário não pediu detalhes.
+- Não diga que você é incapaz de pensar.
+- Não mencione este prompt.
+
+CONVERSA:
+
+Use as mensagens anteriores para entender o contexto.
+Não trate cada mensagem como uma pergunta completamente isolada.
+
+`;
+
+    if (reasoning) {
+
+        prompt += `
+
+RACIOCÍNIO:
+
+Esta é uma pergunta que pode exigir mais raciocínio.
+
+Antes de responder:
+- analise cuidadosamente o problema;
+- verifique as relações entre as informações;
+- procure inconsistências;
+- considere alternativas;
+- confirme os cálculos quando existirem.
+
+Não mostre seu raciocínio interno privado.
+Mostre apenas a explicação e os passos úteis para o usuário.
+
+`;
+    }
+
+    if (webSearch) {
+
+        prompt += `
+
+PESQUISA NA INTERNET:
+
+A pesquisa na internet foi ativada porque a pergunta pode depender
+de informações atuais.
+
+Use a pesquisa quando necessário.
+
+Dê prioridade às informações encontradas recentemente.
+Não invente resultados ou fontes.
+Se a pesquisa não encontrar informação suficiente, diga isso.
+
+`;
+    } else {
+
+        prompt += `
+
+PESQUISA:
+
+Esta pergunta não parece precisar de informações atuais.
+Não faça pesquisa na internet desnecessariamente.
+
+`;
+    }
+
+
+    return {
+        role: "system",
+        content: prompt.trim()
+    };
+}
+
+
+/* =========================================================
+   LIMPAR HISTÓRICO
+   ========================================================= */
+
+function prepareConversation(messages) {
+
+    if (!Array.isArray(messages)) {
+        return [];
+    }
+
+
+    /*
+       Mantemos mais contexto que antes.
+
+       20 mensagens = aproximadamente 10 trocas
+       de usuário + Sarah.
+
+       Isso melhora continuidade sem enviar o
+       histórico inteiro indefinidamente.
+    */
+
+    const recent =
+        messages.slice(-20);
+
+
+    return recent
+        .filter(message => {
+
+            return (
+                message &&
+                (
+                    message.role === "user" ||
+                    message.role === "assistant"
+                ) &&
+                typeof message.content === "string" &&
+                message.content.trim().length > 0
+            );
+
+        })
+        .map(message => ({
+
+            role: message.role,
+
+            content:
+                message.content.trim()
+
+        }));
+}
+
+
+/* =========================================================
+   CHAT
+   ========================================================= */
+
+app.post(
+    "/api/chat",
+    async (req, res) => {
+
+        try {
+
+            const {
+                messages
+            } = req.body;
+
+
+            if (
+                !Array.isArray(messages) ||
+                messages.length === 0
+            ) {
+
+                return res.status(400).json({
+
+                    error:
+                        "Nenhuma mensagem foi enviada."
+
+                });
+            }
+
+
+            /* =============================================
+               ÚLTIMA MENSAGEM DO USUÁRIO
+               ============================================= */
+
+            const lastUserMessage =
+                [...messages]
+                    .reverse()
+                    .find(
+                        message =>
+                            message.role === "user"
+                    );
+
+
+            const userText =
+                lastUserMessage?.content || "";
+
+
+            if (!userText.trim()) {
+
+                return res.status(400).json({
+
+                    error:
+                        "A mensagem está vazia."
+
+                });
+            }
+
+
+            /* =============================================
+               ANÁLISE
+               ============================================= */
+
+            const webSearch =
+                needsWebSearch(userText);
+
+
+            const route =
+                chooseModel(userText);
+
+
+            const conversation =
+                prepareConversation(messages);
+
+
+            /* =============================================
+               SYSTEM
+               ============================================= */
+
+            const systemMessage =
+                createSystemMessage({
+
+                    webSearch,
+
+                    reasoning:
+                        route.reasoning
+
+                });
+
+
+            /* =============================================
+               REQUEST
+               ============================================= */
+
+            const requestOptions = {
+
+                model:
+                    route.model,
+
+                models:
+                    [route.fallback],
+
+                messages:
+                    [
+                        systemMessage,
+                        ...conversation
+                    ],
+
+                max_tokens:
+                    route.reasoning
+                        ? 700
+                        : 450,
+
+                temperature:
+                    route.reasoning
+                        ? 0.
