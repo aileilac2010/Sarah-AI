@@ -5,7 +5,7 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
 
     <meta
@@ -13,10 +13,7 @@
         content="Sarah AI — sua assistente de inteligência artificial"
     >
 
-    <meta
-        name="theme-color"
-        content="#080b14"
-    >
+    <meta name="theme-color" content="#090a0f">
 
     <title>Sarah AI</title>
 
@@ -25,342 +22,387 @@
 
 <body>
 
-    <div class="app">
+<div class="app">
 
-        <!-- ==========================================
-             SIDEBAR
-        =========================================== -->
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
 
-        <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar">
 
-            <div class="sidebar-top">
+        <div class="sidebar-header">
 
-                <div class="brand">
+            <div class="brand">
 
-                    <div class="logo">
-                        S
-                    </div>
-
-                    <div class="brand-text">
-                        <strong>Sarah AI</strong>
-                        <span>Seu assistente de IA</span>
-                    </div>
-
+                <div class="brand-logo">
+                    S
                 </div>
 
-                <button
-                    class="close-sidebar"
-                    type="button"
-                    onclick="toggleSidebar()"
-                    aria-label="Fechar menu"
-                >
-                    ×
-                </button>
+                <div class="brand-info">
+                    <strong>Sarah AI</strong>
+                    <span>Seu assistente de IA</span>
+                </div>
 
             </div>
 
+            <button
+                class="sidebar-close"
+                id="sidebar-close"
+                type="button"
+                aria-label="Fechar menu"
+                onclick="toggleSidebar()"
+            >
+                ×
+            </button>
 
-            <!-- Novo chat -->
+        </div>
+
+
+        <!-- Novo chat -->
+
+        <div class="sidebar-content">
 
             <button
-                class="new-chat"
+                class="new-chat-button"
                 type="button"
                 onclick="newChat()"
             >
-                <span>＋</span>
+                <span class="new-chat-icon">＋</span>
                 <span>Novo chat</span>
             </button>
 
 
-            <!-- Histórico -->
+            <!-- Conversas -->
 
-            <div class="history">
+            <div class="conversation-section">
 
-                <p class="history-title">
+                <div class="section-title">
                     Conversas
-                </p>
-
-                <div
-                    class="history-item active"
-                    onclick="newChat()"
-                >
-                    <span>💬</span>
-                    <span>Nova conversa</span>
                 </div>
 
-            </div>
-
-
-            <!-- Status -->
-
-            <div class="sidebar-bottom">
-
-                <div class="online-status">
-
-                    <span class="status-dot"></span>
-
-                    <div>
-                        <strong>Sarah está online</strong>
-                        <small>IA disponível</small>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </aside>
-
-
-        <!-- ==========================================
-             ÁREA PRINCIPAL
-        =========================================== -->
-
-        <main class="main">
-
-            <!-- Barra superior -->
-
-            <header class="topbar">
-
-                <button
-                    class="menu-button"
-                    type="button"
-                    onclick="toggleSidebar()"
-                    aria-label="Abrir menu"
-                >
-                    ☰
-                </button>
-
-
-                <div class="mobile-brand">
-
-                    <div class="small-logo">
-                        S
-                    </div>
-
-                    <strong>
-                        Sarah AI
-                    </strong>
-
-                </div>
-
-
-                <div class="topbar-actions">
+                <div id="conversation-list" class="conversation-list">
 
                     <button
-                        class="icon-button"
+                        class="conversation-item active"
                         type="button"
-                        title="Tema"
-                        aria-label="Tema"
+                        onclick="newChat()"
                     >
-                        ◐
+
+                        <span class="conversation-icon">
+                            💬
+                        </span>
+
+                        <span class="conversation-name">
+                            Nova conversa
+                        </span>
+
                     </button>
 
                 </div>
 
-            </header>
+            </div>
+
+        </div>
 
 
-            <!-- ======================================
-                 CHAT
-            ======================================= -->
+        <!-- Bottom sidebar -->
 
-            <section class="chat-container">
+        <div class="sidebar-bottom">
 
-                <div
-                    id="messages"
-                    class="messages"
+            <div class="online-card">
+
+                <span class="online-dot"></span>
+
+                <div class="online-info">
+                    <strong>Sarah está online</strong>
+                    <small>IA disponível</small>
+                </div>
+
+            </div>
+
+
+            <div class="sidebar-profile">
+
+                <div class="profile-avatar">
+                    S
+                </div>
+
+                <div class="profile-info">
+                    <strong>Sarah AI</strong>
+                    <span>Assistente pessoal</span>
+                </div>
+
+                <button
+                    class="profile-more"
+                    type="button"
+                    aria-label="Mais opções"
                 >
+                    ⋮
+                </button>
 
-                    <!-- ==================================
-                         TELA INICIAL
-                    =================================== -->
+            </div>
 
-                    <div class="welcome">
+        </div>
 
-                        <div class="welcome-logo">
-                            S
-                        </div>
+    </aside>
 
 
-                        <h1>
-                            Olá, eu sou a <span>Sarah.</span>
-                        </h1>
+    <!-- Overlay mobile -->
+
+    <div
+        class="sidebar-overlay"
+        id="sidebar-overlay"
+        onclick="toggleSidebar()"
+    ></div>
 
 
-                        <p>
-                            Sua assistente de inteligência artificial.
-                        </p>
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="main">
 
 
-                        <!-- ==================================
-                             SUGESTÕES
-                        =================================== -->
+        <!-- Topbar -->
 
-                        <div class="suggestions">
+        <header class="topbar">
+
+            <div class="topbar-left">
+
+                <button
+                    class="menu-button"
+                    type="button"
+                    aria-label="Abrir menu"
+                    onclick="toggleSidebar()"
+                >
+                    ☰
+                </button>
+
+                <div class="mobile-brand">
+
+                    <div class="mobile-logo">
+                        S
+                    </div>
+
+                    <strong>Sarah AI</strong>
+
+                </div>
+
+            </div>
 
 
-                            <!-- Aprender -->
+            <div class="topbar-right">
 
-                            <button
-                                type="button"
-                                onclick="useSuggestion('Explique-me um assunto de forma simples')"
-                            >
+                <button
+                    class="topbar-button"
+                    type="button"
+                    title="Nova conversa"
+                    onclick="newChat()"
+                >
+                    ＋
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             CHAT
+             ================================================= -->
+
+        <section class="chat-area">
+
+            <div
+                id="messages"
+                class="messages"
+            >
+
+
+                <!-- Welcome -->
+
+                <div class="welcome">
+
+                    <div class="welcome-logo">
+                        S
+                    </div>
+
+                    <h1>
+                        Olá, eu sou a
+                        <span>Sarah.</span>
+                    </h1>
+
+                    <p>
+                        Sua assistente de inteligência artificial.
+                    </p>
+
+
+                    <!-- Sugestões -->
+
+                    <div class="suggestions">
+
+
+                        <button
+                            type="button"
+                            onclick="useSuggestion('Explique-me um assunto de forma simples')"
+                        >
+
+                            <div class="suggestion-icon">
+                                ✦
+                            </div>
+
+                            <div class="suggestion-content">
+
+                                <strong>Aprender</strong>
 
                                 <span>
-                                    💡
-                                </span>
-
-                                <strong>
-                                    Aprender
-                                </strong>
-
-                                <small>
                                     Explique um assunto para mim
-                                </small>
-
-                            </button>
-
-
-                            <!-- Criar -->
-
-                            <button
-                                type="button"
-                                onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
-                            >
-
-                                <span>
-                                    ✨
                                 </span>
 
-                                <strong>
-                                    Criar
-                                </strong>
+                            </div>
 
-                                <small>
+                        </button>
+
+
+                        <button
+                            type="button"
+                            onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
+                        >
+
+                            <div class="suggestion-icon">
+                                ✨
+                            </div>
+
+                            <div class="suggestion-content">
+
+                                <strong>Criar</strong>
+
+                                <span>
                                     Ajude-me com uma ideia criativa
-                                </small>
-
-                            </button>
-
-
-                            <!-- Explorar -->
-
-                            <button
-                                type="button"
-                                onclick="useSuggestion('Pesquise e explique este assunto para mim')"
-                            >
-
-                                <span>
-                                    🔎
                                 </span>
 
-                                <strong>
-                                    Explorar
-                                </strong>
+                            </div>
 
-                                <small>
-                                    Quero descobrir algo novo
-                                </small>
-
-                            </button>
+                        </button>
 
 
-                            <!-- Resolver -->
+                        <button
+                            type="button"
+                            onclick="useSuggestion('Pesquise e explique este assunto para mim')"
+                        >
 
-                            <button
-                                type="button"
-                                onclick="useSuggestion('Ajude-me a resolver este problema')"
-                            >
+                            <div class="suggestion-icon">
+                                ◉
+                            </div>
+
+                            <div class="suggestion-content">
+
+                                <strong>Explorar</strong>
 
                                 <span>
-                                    🧠
+                                    Descubra algo novo
                                 </span>
 
-                                <strong>
-                                    Resolver
-                                </strong>
+                            </div>
 
-                                <small>
+                        </button>
+
+
+                        <button
+                            type="button"
+                            onclick="useSuggestion('Ajude-me a resolver este problema')"
+                        >
+
+                            <div class="suggestion-icon">
+                                ◇
+                            </div>
+
+                            <div class="suggestion-content">
+
+                                <strong>Resolver</strong>
+
+                                <span>
                                     Ajude-me com um problema
-                                </small>
+                                </span>
 
-                            </button>
+                            </div>
 
-                        </div>
+                        </button>
+
 
                     </div>
 
                 </div>
 
-
-                <!-- ======================================
-                     CAIXA DE MENSAGEM
-                ======================================= -->
-
-                <div class="input-area">
-
-                    <form id="chat-form">
-
-                        <div class="input-box">
+            </div>
 
 
-                            <!-- Anexo -->
+            <!-- =================================================
+                 INPUT
+                 ================================================= -->
 
-                            <button
-                                type="button"
-                                class="attach-button"
-                                title="Adicionar"
-                                aria-label="Adicionar"
-                            >
-                                ＋
-                            </button>
+            <div class="input-area">
 
+                <form id="chat-form">
 
-                            <!-- Campo -->
-
-                            <textarea
-                                id="message"
-                                name="message"
-                                placeholder="Digite sua mensagem..."
-                                rows="1"
-                                autocomplete="off"
-                                required
-                            ></textarea>
+                    <div class="input-container">
 
 
-                            <!-- Enviar -->
-
-                            <button
-                                type="submit"
-                                id="send-button"
-                                class="send-button"
-                                title="Enviar mensagem"
-                                aria-label="Enviar mensagem"
-                            >
-                                ↑
-                            </button>
-
-                        </div>
-
-                    </form>
+                        <button
+                            class="attach-button"
+                            type="button"
+                            title="Adicionar"
+                            aria-label="Adicionar"
+                        >
+                            ＋
+                        </button>
 
 
-                    <p class="disclaimer">
-                        A Sarah AI pode cometer erros. Verifique informações importantes.
-                    </p>
+                        <textarea
+                            id="message"
+                            name="message"
+                            rows="1"
+                            placeholder="Como posso ajudar você?"
+                            autocomplete="off"
+                            spellcheck="true"
+                            required
+                        ></textarea>
+
+
+                        <button
+                            id="send-button"
+                            class="send-button"
+                            type="submit"
+                            title="Enviar"
+                            aria-label="Enviar mensagem"
+                        >
+                            ↑
+                        </button>
+
+
+                    </div>
+
+                </form>
+
+
+                <div class="input-footer">
+
+                    <span>
+                        A Sarah pode cometer erros. Verifique informações importantes.
+                    </span>
 
                 </div>
 
-            </section>
+            </div>
 
-        </main>
+        </section>
 
-    </div>
+    </main>
+
+</div>
 
 
-    <!-- JavaScript -->
-
-    <script src="script.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
