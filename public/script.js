@@ -1,16 +1,25 @@
-/* =====================================================
-   SARAH AI — SCRIPT PRINCIPAL
-===================================================== */
+/* =========================================================
+   SARAH AI
+   Frontend Chat Engine
+   ========================================================= */
+
+
+/* =========================================================
+   STATE
+   ========================================================= */
 
 let conversationHistory = [];
+
 let isGenerating = false;
 
+let currentConversationTitle = "Nova conversa";
 
-/* =====================================================
-   ELEMENTOS
-===================================================== */
 
-const chatContainer =
+/* =========================================================
+   ELEMENTS
+   ========================================================= */
+
+const messagesContainer =
     document.getElementById("messages");
 
 const messageInput =
@@ -22,29 +31,32 @@ const sendButton =
 const chatForm =
     document.getElementById("chat-form");
 
-const welcomeScreen =
-    document.querySelector(".welcome");
-
 const sidebar =
     document.getElementById("sidebar");
 
+const sidebarOverlay =
+    document.getElementById("sidebar-overlay");
 
-/* =====================================================
+const conversationList =
+    document.getElementById("conversation-list");
+
+
+/* =========================================================
    SCROLL
-===================================================== */
+   ========================================================= */
 
 function scrollToBottom() {
 
-    if (!chatContainer) return;
+    if (!messagesContainer) return;
 
-    chatContainer.scrollTop =
-        chatContainer.scrollHeight;
+    messagesContainer.scrollTop =
+        messagesContainer.scrollHeight;
 }
 
 
-/* =====================================================
-   ADICIONAR MENSAGEM
-===================================================== */
+/* =========================================================
+   ADD MESSAGE
+   ========================================================= */
 
 function addMessage(
     text,
@@ -52,24 +64,26 @@ function addMessage(
     webSearch = false
 ) {
 
-    if (!chatContainer) return null;
+    if (!messagesContainer) {
+        return null;
+    }
 
 
-    const messageWrapper =
+    const message =
         document.createElement("div");
 
-    messageWrapper.className =
+    message.className =
         `message ${type}`;
 
 
-    const messageBubble =
+    const bubble =
         document.createElement("div");
 
-    messageBubble.className =
+    bubble.className =
         "message-bubble";
 
 
-    /* Pesquisa na internet */
+    /* Web indicator */
 
     if (
         type === "assistant" &&
@@ -83,15 +97,13 @@ function addMessage(
             "web-source";
 
         webIndicator.textContent =
-            "🌐 Pesquisado na internet";
+            "🌐 Pesquisa na internet ativada";
 
-        messageBubble.appendChild(
-            webIndicator
-        );
+        bubble.appendChild(webIndicator);
     }
 
 
-    /* Texto */
+    /* Text */
 
     const textElement =
         document.createElement("div");
@@ -103,17 +115,11 @@ function addMessage(
         text || "";
 
 
-    messageBubble.appendChild(
-        textElement
-    );
+    bubble.appendChild(textElement);
 
-    messageWrapper.appendChild(
-        messageBubble
-    );
+    message.appendChild(bubble);
 
-    chatContainer.appendChild(
-        messageWrapper
-    );
+    messagesContainer.appendChild(message);
 
 
     scrollToBottom();
@@ -123,13 +129,18 @@ function addMessage(
 }
 
 
-/* =====================================================
-   PENSANDO...
-===================================================== */
+/* =========================================================
+   THINKING
+   ========================================================= */
 
 function showThinking() {
 
-    if (!chatContainer) return;
+    if (!messagesContainer) {
+        return;
+    }
+
+
+    removeThinking();
 
 
     const thinking =
@@ -144,27 +155,24 @@ function showThinking() {
 
     thinking.innerHTML = `
         <div class="message-bubble">
+
             <div class="thinking-dots">
+
                 <span></span>
                 <span></span>
                 <span></span>
+
             </div>
+
         </div>
     `;
 
 
-    chatContainer.appendChild(
-        thinking
-    );
-
+    messagesContainer.appendChild(thinking);
 
     scrollToBottom();
 }
 
-
-/* =====================================================
-   REMOVER PENSANDO
-===================================================== */
 
 function removeThinking() {
 
@@ -179,9 +187,26 @@ function removeThinking() {
 }
 
 
-/* =====================================================
-   ENVIAR MENSAGEM
-===================================================== */
+/* =========================================================
+   HIDE WELCOME
+   ========================================================= */
+
+function hideWelcome() {
+
+    const welcome =
+        document.querySelector(".welcome");
+
+    if (welcome) {
+
+        welcome.style.display =
+            "none";
+    }
+}
+
+
+/* =========================================================
+   SEND MESSAGE
+   ========================================================= */
 
 async function sendMessage() {
 
@@ -208,7 +233,7 @@ async function sendMessage() {
     }
 
 
-    /* Limpar campo */
+    /* Clear input */
 
     messageInput.value = "";
 
@@ -216,16 +241,10 @@ async function sendMessage() {
         "auto";
 
 
-    /* Esconder tela inicial */
-
-    if (welcomeScreen) {
-
-        welcomeScreen.style.display =
-            "none";
-    }
+    hideWelcome();
 
 
-    /* Mostrar mensagem do usuário */
+    /* User message */
 
     addMessage(
         text,
@@ -233,7 +252,7 @@ async function sendMessage() {
     );
 
 
-    /* Guardar conversa */
+    /* History */
 
     conversationHistory.push({
 
@@ -244,11 +263,27 @@ async function sendMessage() {
     });
 
 
+    /* Title */
+
+    if (
+        currentConversationTitle ===
+        "Nova conversa"
+    ) {
+
+        currentConversationTitle =
+            createConversationTitle(text);
+
+        updateConversationTitle();
+    }
+
+
     isGenerating = true;
 
 
     if (sendButton) {
-        sendButton.disabled = true;
+
+        sendButton.disabled =
+            true;
     }
 
 
@@ -256,10 +291,6 @@ async function sendMessage() {
 
 
     try {
-
-        /* ==========================================
-           PEDIDO AO SERVIDOR
-        ========================================== */
 
         const response =
             await fetch(
@@ -273,20 +304,18 @@ async function sendMessage() {
                             "application/json"
                     },
 
-                    body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                        messages:
-                            conversationHistory
+                            messages:
+                                conversationHistory
 
-                    })
-
+                        })
                 }
             );
 
 
-        /* ==========================================
-           ERRO HTTP
-        ========================================== */
+        /* HTTP error */
 
         if (!response.ok) {
 
@@ -295,16 +324,18 @@ async function sendMessage() {
 
             try {
 
-                const errorData =
+                const data =
                     await response.json();
 
-                if (errorData.error) {
+                if (data.error) {
 
                     errorMessage =
-                        errorData.error;
+                        data.error;
                 }
 
-            } catch (e) {}
+            } catch (error) {
+                /* Ignore */
+            }
 
             throw new Error(
                 errorMessage
@@ -312,9 +343,7 @@ async function sendMessage() {
         }
 
 
-        /* ==========================================
-           STREAM
-        ========================================== */
+        /* Streaming not available */
 
         if (!response.body) {
 
@@ -344,17 +373,16 @@ async function sendMessage() {
         let webSearch = false;
 
 
-        /* ==========================================
-           RECEBER RESPOSTA
-        ========================================== */
+        /* =================================================
+           READ STREAM
+           ================================================= */
 
         while (true) {
 
             const {
                 value,
                 done
-            } =
-                await reader.read();
+            } = await reader.read();
 
 
             if (done) {
@@ -379,32 +407,31 @@ async function sendMessage() {
                 events.pop();
 
 
-            /* ======================================
-               PROCESSAR EVENTOS
-            ====================================== */
-
             for (
-                const event of events
+                const event
+                of events
             ) {
 
-                const line =
-                    event
-                        .split("\n")
-                        .find(
-                            line =>
-                                line.startsWith(
-                                    "data:"
-                                )
-                        );
+                const lines =
+                    event.split("\n");
 
 
-                if (!line) {
+                const dataLine =
+                    lines.find(
+                        line =>
+                            line.startsWith(
+                                "data:"
+                            )
+                    );
+
+
+                if (!dataLine) {
                     continue;
                 }
 
 
                 const jsonText =
-                    line
+                    dataLine
                         .substring(5)
                         .trim();
 
@@ -427,7 +454,7 @@ async function sendMessage() {
                 } catch (error) {
 
                     console.warn(
-                        "Evento inválido:",
+                        "Evento SSE inválido:",
                         jsonText
                     );
 
@@ -435,9 +462,7 @@ async function sendMessage() {
                 }
 
 
-                /* ==================================
-                   INÍCIO
-                ================================== */
+                /* START */
 
                 if (
                     data.type ===
@@ -462,9 +487,7 @@ async function sendMessage() {
                 }
 
 
-                /* ==================================
-                   TEXTO
-                ================================== */
+                /* TEXT */
 
                 else if (
                     data.type ===
@@ -500,9 +523,7 @@ async function sendMessage() {
                 }
 
 
-                /* ==================================
-                   ERRO
-                ================================== */
+                /* ERROR */
 
                 else if (
                     data.type ===
@@ -515,16 +536,26 @@ async function sendMessage() {
                     );
                 }
 
-            }
 
+                /* DONE */
+
+                else if (
+                    data.type ===
+                    "done"
+                ) {
+
+                    removeThinking();
+                }
+
+            }
         }
 
 
-        /* ==========================================
-           GUARDAR RESPOSTA DA SARAH
-        ========================================== */
+        /* =================================================
+           SAVE ASSISTANT MESSAGE
+           ================================================= */
 
-        if (fullResponse) {
+        if (fullResponse.trim()) {
 
             conversationHistory.push({
 
@@ -552,105 +583,52 @@ async function sendMessage() {
             "assistant"
         );
 
+    } finally {
+
+        isGenerating =
+            false;
+
+
+        if (sendButton) {
+
+            sendButton.disabled =
+                false;
+        }
+
+
+        if (messageInput) {
+
+            messageInput.focus();
+        }
+
     }
-
-
-    /* ==========================================
-       FINALIZAR
-    ========================================== */
-
-    isGenerating = false;
-
-
-    if (sendButton) {
-        sendButton.disabled = false;
-    }
-
-
-    if (messageInput) {
-        messageInput.focus();
-    }
-
 }
 
 
-/* =====================================================
-   FORMULÁRIO
-===================================================== */
-
-if (chatForm) {
-
-    chatForm.addEventListener(
-        "submit",
-        function(event) {
-
-            event.preventDefault();
-
-            sendMessage();
-
-        }
-    );
-}
-
-
-/* =====================================================
-   ENTER
-===================================================== */
-
-if (messageInput) {
-
-    messageInput.addEventListener(
-        "keydown",
-        function(event) {
-
-            if (
-                event.key === "Enter" &&
-                !event.shiftKey
-            ) {
-
-                event.preventDefault();
-
-                sendMessage();
-            }
-
-        }
-    );
-
-
-    /* Auto resize */
-
-    messageInput.addEventListener(
-        "input",
-        function() {
-
-            this.style.height =
-                "auto";
-
-            this.style.height =
-                this.scrollHeight +
-                "px";
-
-        }
-    );
-
-}
-
-
-/* =====================================================
-   NOVO CHAT
-===================================================== */
+/* =========================================================
+   NEW CHAT
+   ========================================================= */
 
 function newChat() {
 
-    conversationHistory = [];
-
-
-    if (!chatContainer) {
+    if (isGenerating) {
         return;
     }
 
 
-    chatContainer.innerHTML = "";
+    conversationHistory = [];
+
+
+    currentConversationTitle =
+        "Nova conversa";
+
+
+    if (!messagesContainer) {
+        return;
+    }
+
+
+    messagesContainer.innerHTML = "";
 
 
     const welcome =
@@ -670,28 +648,39 @@ function newChat() {
         </div>
 
         <h1>
-            Olá, eu sou a <span>Sarah.</span>
+            Olá, eu sou a
+            <span>Sarah.</span>
         </h1>
 
         <p>
             Sua assistente de inteligência artificial.
         </p>
 
+
         <div class="suggestions">
+
 
             <button
                 type="button"
                 onclick="useSuggestion('Explique-me um assunto de forma simples')"
             >
-                <span>💡</span>
 
-                <strong>
-                    Aprender
-                </strong>
+                <div class="suggestion-icon">
+                    ✦
+                </div>
 
-                <small>
-                    Explique um assunto para mim
-                </small>
+                <div class="suggestion-content">
+
+                    <strong>
+                        Aprender
+                    </strong>
+
+                    <span>
+                        Explique um assunto para mim
+                    </span>
+
+                </div>
+
             </button>
 
 
@@ -699,15 +688,23 @@ function newChat() {
                 type="button"
                 onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
             >
-                <span>✨</span>
 
-                <strong>
-                    Criar
-                </strong>
+                <div class="suggestion-icon">
+                    ✨
+                </div>
 
-                <small>
-                    Ajude-me com uma ideia criativa
-                </small>
+                <div class="suggestion-content">
+
+                    <strong>
+                        Criar
+                    </strong>
+
+                    <span>
+                        Ajude-me com uma ideia criativa
+                    </span>
+
+                </div>
+
             </button>
 
 
@@ -715,15 +712,23 @@ function newChat() {
                 type="button"
                 onclick="useSuggestion('Pesquise e explique este assunto para mim')"
             >
-                <span>🔎</span>
 
-                <strong>
-                    Explorar
-                </strong>
+                <div class="suggestion-icon">
+                    ◉
+                </div>
 
-                <small>
-                    Quero descobrir algo novo
-                </small>
+                <div class="suggestion-content">
+
+                    <strong>
+                        Explorar
+                    </strong>
+
+                    <span>
+                        Descubra algo novo
+                    </span>
+
+                </div>
+
             </button>
 
 
@@ -731,24 +736,36 @@ function newChat() {
                 type="button"
                 onclick="useSuggestion('Ajude-me a resolver este problema')"
             >
-                <span>🧠</span>
 
-                <strong>
-                    Resolver
-                </strong>
+                <div class="suggestion-icon">
+                    ◇
+                </div>
 
-                <small>
-                    Ajude-me com um problema
-                </small>
+                <div class="suggestion-content">
+
+                    <strong>
+                        Resolver
+                    </strong>
+
+                    <span>
+                        Ajude-me com um problema
+                    </span>
+
+                </div>
+
             </button>
+
 
         </div>
     `;
 
 
-    chatContainer.appendChild(
+    messagesContainer.appendChild(
         welcome
     );
+
+
+    updateConversationTitle();
 
 
     if (messageInput) {
@@ -759,15 +776,16 @@ function newChat() {
             "auto";
 
         messageInput.focus();
-
     }
 
+
+    closeSidebarOnMobile();
 }
 
 
-/* =====================================================
-   SUGESTÃO
-===================================================== */
+/* =========================================================
+   SUGGESTION
+   ========================================================= */
 
 function useSuggestion(text) {
 
@@ -783,19 +801,140 @@ function useSuggestion(text) {
     messageInput.focus();
 
 
+    autoResizeTextarea();
+}
+
+
+/* =========================================================
+   TEXTAREA AUTO RESIZE
+   ========================================================= */
+
+function autoResizeTextarea() {
+
+    if (!messageInput) {
+        return;
+    }
+
+
     messageInput.style.height =
         "auto";
 
 
     messageInput.style.height =
-        messageInput.scrollHeight +
-        "px";
+        Math.min(
+            messageInput.scrollHeight,
+            160
+        ) + "px";
 }
 
 
-/* =====================================================
+/* =========================================================
+   CREATE TITLE
+   ========================================================= */
+
+function createConversationTitle(
+    text
+) {
+
+    const clean =
+        text
+            .replace(/\s+/g, " ")
+            .trim();
+
+
+    if (!clean) {
+        return "Nova conversa";
+    }
+
+
+    if (clean.length <= 32) {
+        return clean;
+    }
+
+
+    return (
+        clean.substring(0, 32)
+        + "..."
+    );
+}
+
+
+/* =========================================================
+   UPDATE SIDEBAR TITLE
+   ========================================================= */
+
+function updateConversationTitle() {
+
+    if (!conversationList) {
+        return;
+    }
+
+
+    conversationList.innerHTML = "";
+
+
+    const item =
+        document.createElement(
+            "button"
+        );
+
+
+    item.className =
+        "conversation-item active";
+
+
+    item.type =
+        "button";
+
+
+    item.onclick =
+        function () {
+            scrollToBottom();
+        };
+
+
+    item.innerHTML = `
+
+        <span class="conversation-icon">
+            💬
+        </span>
+
+        <span class="conversation-name">
+            ${escapeHTML(
+                currentConversationTitle
+            )}
+        </span>
+
+    `;
+
+
+    conversationList.appendChild(
+        item
+    );
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
+function escapeHTML(text) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+}
+
+
+/* =========================================================
    SIDEBAR
-===================================================== */
+   ========================================================= */
 
 function toggleSidebar() {
 
@@ -807,12 +946,131 @@ function toggleSidebar() {
     sidebar.classList.toggle(
         "open"
     );
+
+
+    if (sidebarOverlay) {
+
+        const isOpen =
+            sidebar.classList.contains(
+                "open"
+            );
+
+
+        sidebarOverlay.style.display =
+            isOpen
+                ? "block"
+                : "";
+    }
 }
 
 
-/* =====================================================
-   DISPONIBILIZAR FUNÇÕES PARA O HTML
-===================================================== */
+function closeSidebarOnMobile() {
+
+    if (
+        window.innerWidth <= 900 &&
+        sidebar
+    ) {
+
+        sidebar.classList.remove(
+            "open"
+        );
+
+
+        if (sidebarOverlay) {
+
+            sidebarOverlay.style.display =
+                "";
+        }
+    }
+}
+
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+if (chatForm) {
+
+    chatForm.addEventListener(
+        "submit",
+        function (event) {
+
+            event.preventDefault();
+
+            sendMessage();
+
+        }
+    );
+}
+
+
+/* =========================================================
+   ENTER / SHIFT + ENTER
+   ========================================================= */
+
+if (messageInput) {
+
+    messageInput.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+            }
+
+        }
+    );
+
+
+    messageInput.addEventListener(
+        "input",
+        function () {
+
+            autoResizeTextarea();
+
+        }
+    );
+}
+
+
+/* =========================================================
+   MOBILE RESIZE
+   ========================================================= */
+
+window.addEventListener(
+    "resize",
+    function () {
+
+        if (
+            window.innerWidth > 900 &&
+            sidebar
+        ) {
+
+            sidebar.classList.remove(
+                "open"
+            );
+
+
+            if (sidebarOverlay) {
+
+                sidebarOverlay.style.display =
+                    "";
+            }
+        }
+
+    }
+);
+
+
+/* =========================================================
+   GLOBAL FUNCTIONS
+   ========================================================= */
 
 window.sendMessage =
     sendMessage;
@@ -825,3 +1083,20 @@ window.useSuggestion =
 
 window.toggleSidebar =
     toggleSidebar;
+
+
+/* =========================================================
+   STARTUP
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        if (messageInput) {
+
+            messageInput.focus();
+        }
+
+    }
+);
