@@ -171,10 +171,5 @@ app.post("/api/chat", async (req, res) => {
 /* SERVIDOR */
 
 app.listen(PORT, () => {
-
-    console.log(
-        `Sarah AI rodando na porta ${PORT}`
-    );
-
+    console.log("Sarah AI rodando na porta " + PORT);
 });
-```
