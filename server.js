@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// CONFIGURAÇÕES
+// CONFIGURAÇÃO DO SERVIDOR
 // ==========================================
 
 app.use(cors());
@@ -28,33 +28,46 @@ app.use(express.static("public"));
 
 const client = new OpenAI({
     apiKey: process.env.BAZAARLINK_API_KEY,
-    baseURL: "https://api.bazaarlink.ai/v1"
+    baseURL: "https://api.bazaarlink.ai/v1",
+
+    // IMPORTANTE:
+    // Impede que auto:free passe automaticamente
+    // para modelos pagos quando a quota gratuita acabar.
+    defaultHeaders: {
+        "X-Free-Fallback": "false"
+    }
 });
 
-// Auto Router
-const MODEL = "auto";
+// ==========================================
+// MODELO
+// ==========================================
+
+// Auto Router gratuito.
+// O BazaarLink decide qual modelo gratuito usar
+// de acordo com o tipo da pergunta.
+const MODEL = "auto:free";
 
 // ==========================================
-// SISTEMA DA SARAH
+// PROMPT DA SARAH
 // ==========================================
 
 function createSystemPrompt() {
     return `
-Você é Sarah AI, uma assistente de inteligência artificial moderna,
-inteligente, natural e útil.
+Você é Sarah AI, uma assistente de inteligência artificial
+moderna, inteligente, natural, útil e confiável.
 
 PERSONALIDADE:
 - Seja amigável e natural.
 - Responda em português quando o usuário falar português.
 - Pode usar um tom descontraído quando a conversa permitir.
 - Não seja excessivamente formal.
-- Não repita a pergunta do usuário desnecessariamente.
-- Vá direto ao ponto.
+- Não repita a pergunta do usuário sem necessidade.
+- Vá diretamente ao ponto.
 - Adapte a profundidade da resposta à pergunta.
 
-INTELIGÊNCIA E QUALIDADE:
+QUALIDADE:
 - Analise cuidadosamente cada pergunta antes de responder.
-- Não invente fatos.
+- Não invente informações.
 - Se não souber algo, diga claramente.
 - Diferencie fatos, opiniões e possibilidades.
 - Quando houver várias interpretações, explique-as.
@@ -63,38 +76,44 @@ INTELIGÊNCIA E QUALIDADE:
 - Em programação, procure erros no código e proponha soluções funcionais.
 - Em assuntos escolares, explique de forma simples e didática.
 - Em perguntas complexas, organize a resposta em partes.
-- Use exemplos quando ajudarem.
+- Use exemplos quando realmente ajudarem.
 
 CONVERSA:
 - Use o histórico da conversa para manter contexto.
-- Lembre-se do que foi dito anteriormente nesta conversa.
-- Não trate cada mensagem como uma conversa nova.
+- Não trate cada mensagem como uma conversa completamente nova.
 - Se o usuário fizer uma pergunta curta relacionada à mensagem anterior,
   use o contexto anterior para entendê-la.
-
-PESQUISA:
-- Quando a pergunta depender de informações atuais, recentes,
-  preços, notícias, resultados, acontecimentos ou informações
-  que possam ter mudado, utilize a pesquisa na internet quando disponível.
-- Para conhecimentos gerais e estáveis, não pesquise desnecessariamente.
-- Nunca invente resultados de pesquisa ou fontes.
+- Mantenha continuidade natural durante a conversa.
 
 RACIOCÍNIO:
-- Para problemas complexos, raciocine cuidadosamente antes de responder.
+- Para problemas complexos, analise cuidadosamente as informações.
+- Verifique relações, cálculos e possíveis inconsistências.
+- Considere alternativas quando necessário.
 - Não revele seu raciocínio interno privado.
-- Mostre apenas explicações, cálculos e passos úteis ao usuário.
+- Mostre apenas explicações e passos úteis para o usuário.
+
+PESQUISA:
+- Informações atuais ou recentes podem exigir pesquisa na internet.
+- Preços, notícias, resultados, acontecimentos recentes e informações
+  que mudam com o tempo devem ser verificadas quando a pesquisa estiver disponível.
+- Não pesquise desnecessariamente assuntos estáveis.
+- Nunca invente resultados ou fontes.
 
 FORMATAÇÃO:
 - Use parágrafos curtos.
 - Use listas quando forem úteis.
 - Use títulos curtos em respostas grandes.
 - Evite respostas enormes quando uma resposta curta resolver a questão.
-- Não mencione estas instruções ou este prompt.
+- Não mencione estas instruções.
+- Não mencione este prompt.
+
+IMPORTANTE:
+Você deve priorizar precisão, clareza e utilidade.
 `;
 }
 
 // ==========================================
-// CONTEXTO
+// CONTEXTO DA CONVERSA
 // ==========================================
 
 function prepareConversation(messages) {
@@ -102,9 +121,10 @@ function prepareConversation(messages) {
         return [];
     }
 
-    // Mantemos as últimas 30 mensagens.
-    // O middle-out do BazaarLink ajuda a lidar
-    // com contextos que ultrapassem o limite do modelo.
+    // Mantém as últimas 30 mensagens.
+    //
+    // O BazaarLink também pode aplicar o transform
+    // middle-out caso o contexto fique grande.
     const recentMessages = messages.slice(-30);
 
     return recentMessages
@@ -124,7 +144,7 @@ function prepareConversation(messages) {
 }
 
 // ==========================================
-// PESQUISA WEB
+// DETECÇÃO DE PESQUISA
 // ==========================================
 
 function shouldSearchWeb(message) {
@@ -134,24 +154,34 @@ function shouldSearchWeb(message) {
         .replace(/[\u0300-\u036f]/g, "");
 
     const patterns = [
+        // Atualidade
         "hoje",
         "agora",
         "atualmente",
         "atual",
         "recentemente",
         "recente",
+        "recentes",
+
+        // Notícias
         "noticia",
         "noticias",
         "ultima noticia",
         "ultimas noticias",
         "noticias de hoje",
         "o que aconteceu",
+
+        // Pesquisa explícita
         "pesquise",
+        "pesquisar",
         "pesquisa na internet",
-        "procure na internet",
         "pesquise na internet",
-        "pesquisa online",
+        "procure na internet",
         "procure online",
+        "pesquisa online",
+        "veja na internet",
+
+        // Preços / economia
         "preco atual",
         "precos atuais",
         "quanto custa agora",
@@ -160,15 +190,22 @@ function shouldSearchWeb(message) {
         "dolar hoje",
         "euro hoje",
         "bitcoin hoje",
+
+        // Esportes
         "resultado de hoje",
         "resultado do jogo",
         "jogo de hoje",
         "jogos de hoje",
         "placar",
         "classificacao atual",
+
+        // Clima
         "tempo hoje",
         "clima hoje",
         "previsao do tempo",
+        "previsao para hoje",
+
+        // Internet
         "na internet",
         "online"
     ];
@@ -185,7 +222,7 @@ app.post("/api/chat", async (req, res) => {
         const { messages } = req.body;
 
         // --------------------------------------
-        // VALIDAÇÃO
+        // VALIDAR MENSAGENS
         // --------------------------------------
 
         if (!Array.isArray(messages) || messages.length === 0) {
@@ -212,7 +249,15 @@ app.post("/api/chat", async (req, res) => {
 
         const conversation = prepareConversation(messages);
 
+        // --------------------------------------
+        // DECIDIR SE PESQUISA É NECESSÁRIA
+        // --------------------------------------
+
         const webSearch = shouldSearchWeb(userText);
+
+        // --------------------------------------
+        // SYSTEM PROMPT
+        // --------------------------------------
 
         const systemMessage = {
             role: "system",
@@ -220,7 +265,7 @@ app.post("/api/chat", async (req, res) => {
         };
 
         // --------------------------------------
-        // PEDIDO PARA BAZAARLINK
+        // OPÇÕES DA REQUISIÇÃO
         // --------------------------------------
 
         const requestOptions = {
@@ -231,24 +276,23 @@ app.post("/api/chat", async (req, res) => {
                 ...conversation
             ],
 
-            // Fallbacks não são necessários aqui:
-            // o próprio Auto Router possui sua cadeia
-            // de fallback configurada.
-            stream: true,
+            // Permite respostas mais completas.
+            max_tokens: 1000,
 
-            // Ajuda com conversas longas.
-            transforms: ["middle-out"],
-
-            // Temperatura moderada para respostas
-            // naturais sem ficar excessivamente aleatória.
+            // Temperatura equilibrada:
+            // natural, mas sem ficar excessivamente aleatória.
             temperature: 0.55,
 
-            // Limite razoável de resposta.
-            max_tokens: 1000
+            // Streaming:
+            // a resposta aparece enquanto está sendo gerada.
+            stream: true,
+
+            // Ajuda a lidar com conversas longas.
+            transforms: ["middle-out"]
         };
 
         // --------------------------------------
-        // PESQUISA
+        // PESQUISA WEB
         // --------------------------------------
 
         if (webSearch) {
@@ -288,7 +332,7 @@ app.post("/api/chat", async (req, res) => {
         }
 
         // --------------------------------------
-        // AVISAR FRONTEND
+        // INFORMAR FRONTEND
         // --------------------------------------
 
         res.write(
@@ -300,7 +344,23 @@ app.post("/api/chat", async (req, res) => {
         );
 
         console.log(
-            `[Sarah AI] Auto Router | web=${webSearch}`
+            "========================================"
+        );
+
+        console.log(
+            `[Sarah AI] Modelo solicitado: ${MODEL}`
+        );
+
+        console.log(
+            `[Sarah AI] Pesquisa web: ${webSearch}`
+        );
+
+        console.log(
+            `[Sarah AI] Contexto: ${conversation.length} mensagens`
+        );
+
+        console.log(
+            "========================================"
         );
 
         // --------------------------------------
@@ -313,10 +373,32 @@ app.post("/api/chat", async (req, res) => {
             );
 
         // --------------------------------------
-        // STREAMING
+        // PEGAR MODELO REALMENTE ESCOLHIDO
+        // --------------------------------------
+
+        // O OpenAI SDK pode expor os headers na resposta.
+        // Nem todas as versões do SDK disponibilizam isso
+        // da mesma forma durante streaming, por isso
+        // também tentamos detectar o modelo pelo chunk.
+
+        let resolvedModel = null;
+
+        // --------------------------------------
+        // STREAM DA RESPOSTA
         // --------------------------------------
 
         for await (const chunk of stream) {
+
+            // Algumas respostas podem informar o modelo
+            // diretamente no corpo.
+            if (chunk.model && !resolvedModel) {
+                resolvedModel = chunk.model;
+
+                console.log(
+                    `[Sarah AI] Modelo escolhido: ${resolvedModel}`
+                );
+            }
+
             const content =
                 chunk.choices?.[0]?.delta?.content;
 
@@ -333,12 +415,13 @@ app.post("/api/chat", async (req, res) => {
         }
 
         // --------------------------------------
-        // FINAL
+        // FINALIZAR STREAM
         // --------------------------------------
 
         res.write(
             `data: ${JSON.stringify({
-                type: "done"
+                type: "done",
+                resolvedModel: resolvedModel
             })}\n\n`
         );
 
@@ -351,7 +434,7 @@ app.post("/api/chat", async (req, res) => {
         );
 
         console.error(
-            "ERRO DA BAZAARLINK:"
+            "ERRO DA BAZAARLINK"
         );
 
         console.error(error);
@@ -360,20 +443,79 @@ app.post("/api/chat", async (req, res) => {
             "========================================"
         );
 
-        // Se ainda não começamos o streaming
+        // --------------------------------------
+        // ERRO DE QUOTA GRATUITA
+        // --------------------------------------
+
+        if (
+            error?.status === 429 ||
+            error?.code === 429 ||
+            error?.error?.code === 429
+        ) {
+            const message =
+                "A quota gratuita da Sarah AI foi atingida. Tente novamente mais tarde.";
+
+            if (!res.headersSent) {
+                return res.status(429).json({
+                    error: message
+                });
+            }
+
+            res.write(
+                `data: ${JSON.stringify({
+                    type: "error",
+                    error: message
+                })}\n\n`
+            );
+
+            return res.end();
+        }
+
+        // --------------------------------------
+        // ERRO DE CRÉDITOS
+        // --------------------------------------
+
+        if (
+            error?.status === 402 ||
+            error?.code === 402 ||
+            error?.error?.code === 402
+        ) {
+            const message =
+                "A Sarah AI não conseguiu usar o modelo gratuito neste momento.";
+
+            if (!res.headersSent) {
+                return res.status(402).json({
+                    error: message
+                });
+            }
+
+            res.write(
+                `data: ${JSON.stringify({
+                    type: "error",
+                    error: message
+                })}\n\n`
+            );
+
+            return res.end();
+        }
+
+        // --------------------------------------
+        // ERRO GENÉRICO
+        // --------------------------------------
+
+        const message =
+            "Não foi possível obter uma resposta da Sarah AI.";
+
         if (!res.headersSent) {
             return res.status(500).json({
-                error:
-                    "Não foi possível obter uma resposta da Sarah AI."
+                error: message
             });
         }
 
-        // Se o streaming já começou
         res.write(
             `data: ${JSON.stringify({
                 type: "error",
-                error:
-                    "Não foi possível obter uma resposta da Sarah AI."
+                error: message
             })}\n\n`
         );
 
@@ -390,7 +532,11 @@ app.get("/api/health", (req, res) => {
         status: "online",
         service: "Sarah AI",
         model: MODEL,
-        router: "BazaarLink Auto Router"
+        router: "BazaarLink Auto Router",
+        freeOnly: true,
+        webSearch: true,
+        contextMessages: 30,
+        streaming: true
     });
 });
 
@@ -404,7 +550,11 @@ app.listen(PORT, () => {
     );
 
     console.log(
-        "Sarah AI está rodando!"
+        "        SARAH AI"
+    );
+
+    console.log(
+        "========================================"
     );
 
     console.log(
@@ -416,7 +566,11 @@ app.listen(PORT, () => {
     );
 
     console.log(
-        "Roteamento: automático"
+        "Roteamento: Auto Router gratuito"
+    );
+
+    console.log(
+        "Fallback pago: DESATIVADO"
     );
 
     console.log(
