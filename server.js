@@ -101,7 +101,7 @@ Você pode utilizar:
 
 **negrito**
 *itálico*
-`código`
+\`código\`
 
 Títulos:
 
@@ -418,7 +418,10 @@ app.post("/api/chat", async (req, res) => {
             "========================================"
         );
 
-        // Quota
+        // ======================================
+        // QUOTA
+        // ======================================
+
         if (
             error?.status === 429 ||
             error?.code === 429 ||
@@ -443,7 +446,10 @@ app.post("/api/chat", async (req, res) => {
             return res.end();
         }
 
-        // Créditos
+        // ======================================
+        // CRÉDITOS
+        // ======================================
+
         if (
             error?.status === 402 ||
             error?.code === 402 ||
@@ -468,7 +474,10 @@ app.post("/api/chat", async (req, res) => {
             return res.end();
         }
 
-        // Erro geral
+        // ======================================
+        // ERRO GERAL
+        // ======================================
+
         const message =
             "Não foi possível obter uma resposta da Sarah AI.";
 
@@ -511,6 +520,7 @@ app.get("/api/health", (req, res) => {
 // ==========================================
 
 app.listen(PORT, () => {
+
     console.log(
         "========================================"
     );
