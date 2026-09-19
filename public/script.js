@@ -1,357 +1,150 @@
-const form = document.getElementById("chat-form");
-
-const input = document.getElementById("message");
-
-const messages = document.getElementById("messages");
-
-const sendButton = document.getElementById("send-button");
+/* =====================================================
+   SARAH AI — SCRIPT PRINCIPAL
+===================================================== */
 
 
-/*
-    HISTÓRICO DA CONVERSA
-
-    Fica disponível enquanto a página
-    estiver aberta.
-*/
+/* =====================================================
+   ESTADO DA CONVERSA
+===================================================== */
 
 let conversationHistory = [];
 
+let isGenerating = false;
 
-/* =========================
-   ENVIAR MENSAGEM
-========================= */
 
-form.addEventListener("submit", async (event) => {
+/* =====================================================
+   ELEMENTOS DA INTERFACE
+===================================================== */
 
-    event.preventDefault();
+const chatContainer =
+    document.getElementById("chatContainer");
 
-    const message = input.value.trim();
+const messageInput =
+    document.getElementById("messageInput");
 
-    if (!message) return;
+const sendButton =
+    document.getElementById("sendButton");
 
+const welcomeScreen =
+    document.getElementById("welcomeScreen");
 
-    /* Mostrar mensagem do usuário */
 
-    addMessage(message, "user");
+/* =====================================================
+   ADICIONAR MENSAGEM NA INTERFACE
+===================================================== */
 
+function addMessage(
+    text,
+    type,
+    webSearch = false
+) {
 
-    input.value = "";
+    const messageWrapper =
+        document.createElement("div");
 
-    input.style.height = "auto";
+    messageWrapper.className =
+        `message ${type}`;
 
 
-    sendButton.disabled = true;
+    const messageBubble =
+        document.createElement("div");
 
-
-    /* Guardar no histórico */
-
-    conversationHistory.push({
-
-        role: "user",
-
-        content: message
-
-    });
-
-
-    /* Mensagem de processamento */
-
-    const thinkingMessage = addMessage(
-
-        "Sarah está pensando...",
-
-        "ai"
-
-    );
-
-
-    try {
-
-        const response = await fetch("/api/chat", {
-
-            method: "POST",
-
-            headers: {
-
-                "Content-Type": "application/json"
-
-            },
-
-            body: JSON.stringify({
-
-                messages: conversationHistory
-
-            })
-
-        });
-
-
-        const data = await response.json();
-
-
-        thinkingMessage.remove();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-
-                data.error ||
-
-                "Erro ao comunicar com a Sarah."
-
-            );
-
-        }
-
-
-        /*
-            Mostrar resposta
-        */
-
-        addMessage(
-
-            data.reply,
-
-            "ai",
-
-            data.webSearch === true
-
-        );
-
-
-        /*
-            Guardar resposta da Sarah
-        */
-
-        conversationHistory.push({
-
-            role: "assistant",
-
-            content: data.reply
-
-        });
-
-
-    } catch (error) {
-
-        thinkingMessage.remove();
-
-
-        /*
-            Remover última mensagem
-            caso tenha ocorrido erro
-        */
-
-        conversationHistory.pop();
-
-
-        addMessage(
-
-            "Desculpa, ocorreu um erro ao tentar responder. Tenta novamente.",
-
-            "ai"
-
-        );
-
-
-        console.error(error);
-
-    } finally {
-
-        sendButton.disabled = false;
-
-        input.focus();
-
-    }
-
-});
-
-
-/* =========================
-   ADICIONAR MENSAGEM
-========================= */
-
-function addMessage(text, type, webSearch = false) {
-
-    const message = document.createElement("div");
-
-
-    message.className =
-
-        type === "user"
-
-            ? "message user-message"
-
-            : "message ai-message";
-
-
-    const wrapper = document.createElement("div");
-
-
-    const content = document.createElement("div");
-
-
-    content.className = "message-content";
-
-
-    content.textContent = text;
-
-
-    wrapper.appendChild(content);
+    messageBubble.className =
+        "message-bubble";
 
 
     /*
-        Aviso de pesquisa web
+       Indicador de pesquisa
     */
 
-    if (webSearch && type === "ai") {
+    if (
+        type === "assistant" &&
+        webSearch
+    ) {
 
         const webIndicator =
             document.createElement("div");
 
+        webIndicator.className =
+            "web-source";
 
-        webIndicator.className = "web-source";
-
-
-        webIndicator.textContent =
+        webIndicator.innerHTML =
             "🌐 Pesquisado na internet";
 
-
-        wrapper.appendChild(webIndicator);
+        messageBubble.appendChild(
+            webIndicator
+        );
 
     }
 
 
-    message.appendChild(wrapper);
+    /*
+       Texto
+    */
+
+    const textElement =
+        document.createElement("div");
+
+    textElement.className =
+        "message-text";
+
+    textElement.textContent =
+        text || "";
 
 
-    messages.appendChild(message);
+    messageBubble.appendChild(
+        textElement
+    );
 
 
-    messages.scrollTo({
-
-        top: messages.scrollHeight,
-
-        behavior: "smooth"
-
-    });
+    messageWrapper.appendChild(
+        messageBubble
+    );
 
 
-    return message;
+    chatContainer.appendChild(
+        messageWrapper
+    );
+
+
+    /*
+       Scroll automático
+    */
+
+    chatContainer.scrollTop =
+        chatContainer.scrollHeight;
+
+
+    return textElement;
 
 }
 
 
-/* =========================
-   NOVO CHAT
-========================= */
+/* =====================================================
+   INDICADOR "SARAH ESTÁ PENSANDO"
+===================================================== */
 
-function newChat() {
+function showThinking() {
 
-    conversationHistory = [];
+    const thinking =
+        document.createElement("div");
 
+    thinking.className =
+        "message assistant thinking-message";
 
-    messages.innerHTML = `
-
-        <div class="welcome">
-
-            <div class="welcome-logo">
-                S
-            </div>
-
-            <h1>
-                Olá, eu sou a Sarah.
-            </h1>
-
-            <p>
-                Sua assistente de inteligência artificial.
-            </p>
-
-            <div class="suggestions">
-
-                <button
-                    onclick="useSuggestion(
-                        'Explique-me um assunto de forma simples'
-                    )"
-                >
-
-                    <span>💡</span>
-
-                    <div>
-
-                        <strong>Aprender</strong>
-
-                        <small>
-                            Explique um assunto para mim
-                        </small>
-
-                    </div>
-
-                </button>
+    thinking.id =
+        "thinkingMessage";
 
 
-                <button
-                    onclick="useSuggestion(
-                        'Ajude-me a criar uma ideia criativa'
-                    )"
-                >
+    thinking.innerHTML = `
 
-                    <span>✨</span>
+        <div class="message-bubble">
 
-                    <div>
+            <div class="thinking-dots">
 
-                        <strong>Criar</strong>
-
-                        <small>
-                            Ajude-me com uma ideia
-                        </small>
-
-                    </div>
-
-                </button>
-
-
-                <button
-                    onclick="useSuggestion(
-                        'Pesquise e explique este assunto para mim'
-                    )"
-                >
-
-                    <span>🔎</span>
-
-                    <div>
-
-                        <strong>Explorar</strong>
-
-                        <small>
-                            Quero descobrir algo novo
-                        </small>
-
-                    </div>
-
-                </button>
-
-
-                <button
-                    onclick="useSuggestion(
-                        'Ajude-me a resolver este problema'
-                    )"
-                >
-
-                    <span>🧠</span>
-
-                    <div>
-
-                        <strong>Resolver</strong>
-
-                        <small>
-                            Ajude-me com um problema
-                        </small>
-
-                    </div>
-
-                </button>
+                <span></span>
+                <span></span>
+                <span></span>
 
             </div>
 
@@ -359,91 +152,250 @@ function newChat() {
 
     `;
 
-    input.focus();
+
+    chatContainer.appendChild(
+        thinking
+    );
+
+
+    chatContainer.scrollTop =
+        chatContainer.scrollHeight;
 
 }
 
 
-/* =========================
-   SUGESTÕES
-========================= */
+/* =====================================================
+   REMOVER INDICADOR
+===================================================== */
 
-function useSuggestion(text) {
+function removeThinking() {
 
-    input.value = text;
+    const thinking =
+        document.getElementById(
+            "thinkingMessage"
+        );
 
-    input.focus();
+    if (thinking) {
 
-    input.style.height = "auto";
-
-    input.style.height =
-
-        Math.min(
-
-            input.scrollHeight,
-
-            160
-
-        ) + "px";
-
-}
-
-
-/* =========================
-   SIDEBAR
-========================= */
-
-function toggleSidebar() {
-
-    const sidebar =
-        document.getElementById("sidebar");
-
-
-    sidebar.classList.toggle("open");
-
-}
-
-
-/* =========================
-   TEXTAREA
-========================= */
-
-input.addEventListener("input", () => {
-
-    input.style.height = "auto";
-
-
-    input.style.height =
-
-        Math.min(
-
-            input.scrollHeight,
-
-            160
-
-        ) + "px";
-
-});
-
-
-/* =========================
-   ENTER
-========================= */
-
-input.addEventListener("keydown", (event) => {
-
-    if (
-
-        event.key === "Enter" &&
-
-        !event.shiftKey
-
-    ) {
-
-        event.preventDefault();
-
-        form.requestSubmit();
+        thinking.remove();
 
     }
 
-});
+}
+
+
+/* =====================================================
+   ENVIAR MENSAGEM
+===================================================== */
+
+async function sendMessage() {
+
+    if (isGenerating) {
+        return;
+    }
+
+
+    const text =
+        messageInput.value.trim();
+
+
+    if (!text) {
+        return;
+    }
+
+
+    /*
+       Limpar input
+    */
+
+    messageInput.value = "";
+
+    messageInput.style.height =
+        "auto";
+
+
+    /*
+       Esconder tela inicial
+    */
+
+    if (welcomeScreen) {
+
+        welcomeScreen.style.display =
+            "none";
+
+    }
+
+
+    /*
+       Mostrar mensagem do usuário
+    */
+
+    addMessage(
+        text,
+        "user"
+    );
+
+
+    /*
+       Guardar mensagem
+    */
+
+    conversationHistory.push({
+
+        role: "user",
+
+        content: text
+
+    });
+
+
+    /*
+       Estado de carregamento
+    */
+
+    isGenerating = true;
+
+
+    sendButton.disabled =
+        true;
+
+
+    showThinking();
+
+
+    try {
+
+        /* ---------------------------------------------
+           PEDIDO AO SERVIDOR
+        --------------------------------------------- */
+
+        const response =
+            await fetch(
+                "/api/chat",
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+
+                        messages:
+                            conversationHistory
+
+                    })
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Erro no servidor."
+            );
+
+        }
+
+
+        /*
+           Streaming
+        */
+
+        const reader =
+            response.body.getReader();
+
+
+        const decoder =
+            new TextDecoder();
+
+
+        let buffer = "";
+
+        let fullResponse = "";
+
+        let assistantTextElement =
+            null;
+
+        let webSearch = false;
+
+
+        /* ---------------------------------------------
+           RECEBER STREAM
+        --------------------------------------------- */
+
+        while (true) {
+
+            const {
+                value,
+                done
+            } = await reader.read();
+
+
+            if (done) {
+                break;
+            }
+
+
+            /*
+               Converter bytes → texto
+            */
+
+            buffer +=
+                decoder.decode(
+                    value,
+                    {
+                        stream: true
+                    }
+                );
+
+
+            /*
+               Separar eventos SSE
+            */
+
+            const events =
+                buffer.split("\n\n");
+
+
+            /*
+               Guardar último pedaço
+               caso esteja incompleto
+            */
+
+            buffer =
+                events.pop();
+
+
+            /*
+               Processar eventos
+            */
+
+            for (
+                const event of events
+            ) {
+
+                const line =
+                    event
+                        .split("\n")
+                        .find(
+                            line =>
+                                line.startsWith(
+                                    "data:"
+                                )
+                        );
+
+
+                if (!line) {
+                    continue;
+                }
+
+
+                const jsonText =
+                    line
+                       
