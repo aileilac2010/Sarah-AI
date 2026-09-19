@@ -6,11 +6,11 @@
 
 :root {
     --black: #000000;
-    --dark: #0a0a0a;
-    --dark-2: #111111;
-    --border: #1f1f1f;
+    --dark: #080808;
+    --dark-2: #101010;
+    --border: #1e1e1e;
     --text: #f5f5f5;
-    --muted: #777777;
+    --muted: #707070;
     --white: #ffffff;
 }
 
@@ -33,16 +33,20 @@ button {
 }
 
 
-/* APP */
+/* =========================
+   APP
+========================= */
 
 .app {
     display: flex;
     height: 100vh;
-    background: var(--black);
+    background: #000;
 }
 
 
-/* SIDEBAR */
+/* =========================
+   SIDEBAR
+========================= */
 
 .sidebar {
     width: 250px;
@@ -56,9 +60,6 @@ button {
 
     flex-shrink: 0;
 }
-
-
-/* LOGO */
 
 .brand {
     display: flex;
@@ -77,7 +78,7 @@ button {
     background: white;
     color: black;
 
-    border-radius: 10px;
+    border-radius: 9px;
 
     font-weight: bold;
     font-size: 20px;
@@ -99,7 +100,9 @@ button {
 }
 
 
-/* NOVO CHAT */
+/* =========================
+   NEW CHAT
+========================= */
 
 .new-chat {
     margin-top: 30px;
@@ -107,8 +110,10 @@ button {
     width: 100%;
     padding: 12px;
 
-    background: #111111;
-    border: 1px solid #222222;
+    background: #101010;
+
+    border: 1px solid #202020;
+
     border-radius: 9px;
 
     color: white;
@@ -119,11 +124,13 @@ button {
 }
 
 .new-chat:hover {
-    background: #181818;
+    background: #171717;
 }
 
 
-/* HISTÓRICO */
+/* =========================
+   HISTORY
+========================= */
 
 .history {
     margin-top: 30px;
@@ -131,8 +138,11 @@ button {
 
 .history-title {
     color: #555;
-    font-size: 11px;
+
+    font-size: 10px;
+
     text-transform: uppercase;
+
     letter-spacing: 1px;
 
     margin-bottom: 12px;
@@ -140,12 +150,15 @@ button {
 
 .history-item {
     padding: 10px;
+
     border-radius: 7px;
 
     color: #aaa;
 
     display: flex;
+
     gap: 9px;
+
     align-items: center;
 
     font-size: 13px;
@@ -153,11 +166,14 @@ button {
 
 .history-item.active {
     background: #111;
+
     color: white;
 }
 
 
-/* STATUS */
+/* =========================
+   SIDEBAR STATUS
+========================= */
 
 .sidebar-bottom {
     margin-top: auto;
@@ -165,7 +181,9 @@ button {
 
 .online-status {
     display: flex;
+
     align-items: center;
+
     gap: 10px;
 
     padding-top: 15px;
@@ -177,34 +195,42 @@ button {
     width: 7px;
     height: 7px;
 
-    background: #ffffff;
+    background: white;
 
     border-radius: 50%;
 }
 
 .online-status strong {
     display: block;
+
     font-size: 12px;
 }
 
 .online-status small {
     color: #666;
+
     font-size: 10px;
 }
 
 
-/* MAIN */
+/* =========================
+   MAIN
+========================= */
 
 .main {
     flex: 1;
+
     display: flex;
+
     flex-direction: column;
 
     min-width: 0;
 }
 
 
-/* TOPBAR */
+/* =========================
+   TOPBAR
+========================= */
 
 .topbar {
     height: 60px;
@@ -212,6 +238,7 @@ button {
     border-bottom: 1px solid var(--border);
 
     display: flex;
+
     align-items: center;
 
     padding: 0 25px;
@@ -223,16 +250,23 @@ button {
 
 .icon-button {
     background: transparent;
+
     color: #777;
 
     font-size: 18px;
 }
 
 
-/* MOBILE BRAND */
+/* =========================
+   MOBILE BRAND
+========================= */
 
 .mobile-brand {
     display: none;
+
+    align-items: center;
+
+    gap: 8px;
 }
 
 .small-logo {
@@ -240,43 +274,54 @@ button {
     height: 28px;
 
     background: white;
+
     color: black;
 
     border-radius: 7px;
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     font-weight: bold;
 }
 
 
-/* MENU */
+/* =========================
+   MENU
+========================= */
 
 .menu-button {
     display: none;
 
     background: transparent;
+
     color: white;
 
     font-size: 20px;
 }
 
 
-/* CHAT */
+/* =========================
+   CHAT
+========================= */
 
 .chat-container {
     flex: 1;
 
     display: flex;
+
     flex-direction: column;
 
     min-height: 0;
 }
 
 
-/* MESSAGES */
+/* =========================
+   MESSAGES
+========================= */
 
 .messages {
     flex: 1;
@@ -286,21 +331,26 @@ button {
     padding: 40px 20px;
 
     max-width: 850px;
+
     width: 100%;
 
     margin: auto;
 }
 
 
-/* WELCOME */
+/* =========================
+   WELCOME
+========================= */
 
 .welcome {
     min-height: 65vh;
 
     display: flex;
+
     flex-direction: column;
 
     justify-content: center;
+
     align-items: center;
 
     text-align: center;
@@ -311,15 +361,19 @@ button {
     height: 55px;
 
     background: white;
+
     color: black;
 
     border-radius: 14px;
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     font-size: 25px;
+
     font-weight: bold;
 
     margin-bottom: 20px;
@@ -327,26 +381,32 @@ button {
 
 .welcome h1 {
     font-size: 30px;
+
     font-weight: 500;
 }
 
 .welcome p {
     color: #666;
+
     margin-top: 8px;
 }
 
 
-/* SUGGESTIONS */
+/* =========================
+   SUGGESTIONS
+========================= */
 
 .suggestions {
     margin-top: 35px;
 
     display: grid;
+
     grid-template-columns: repeat(2, 1fr);
 
     gap: 10px;
 
     width: 100%;
+
     max-width: 600px;
 }
 
@@ -364,6 +424,7 @@ button {
     text-align: left;
 
     display: flex;
+
     gap: 12px;
 
     transition: 0.2s;
@@ -375,17 +436,22 @@ button {
 
 .suggestions strong {
     display: block;
+
     font-size: 13px;
 }
 
 .suggestions small {
     display: block;
+
     color: #666;
+
     margin-top: 4px;
 }
 
 
-/* MESSAGES */
+/* =========================
+   MESSAGE BUBBLES
+========================= */
 
 .message {
     display: flex;
@@ -413,6 +479,7 @@ button {
 
 .user-message .message-content {
     background: #181818;
+
     border: 1px solid #252525;
 }
 
@@ -421,7 +488,9 @@ button {
 }
 
 
-/* INTERNET NOTICE */
+/* =========================
+   WEB INDICATOR
+========================= */
 
 .web-source {
     color: #777;
@@ -429,14 +498,18 @@ button {
     font-size: 11px;
 
     margin-top: 7px;
+
     margin-left: 3px;
 }
 
 
-/* INPUT */
+/* =========================
+   INPUT
+========================= */
 
 .input-area {
     width: 100%;
+
     max-width: 850px;
 
     margin: auto;
@@ -446,6 +519,7 @@ button {
 
 .input-box {
     display: flex;
+
     align-items: flex-end;
 
     background: #0c0c0c;
@@ -469,6 +543,7 @@ textarea {
     background: transparent;
 
     border: none;
+
     outline: none;
 
     color: white;
@@ -485,8 +560,106 @@ textarea::placeholder {
 }
 
 
-/* BUTTONS */
+/* =========================
+   BUTTONS
+========================= */
 
 .attach-button,
 .send-button {
-    width
+    width: 35px;
+
+    height: 35px;
+
+    border-radius: 8px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+.attach-button {
+    background: transparent;
+
+    color: #666;
+}
+
+.send-button {
+    background: white;
+
+    color: black;
+
+    font-size: 17px;
+}
+
+.send-button:disabled {
+    opacity: 0.4;
+}
+
+
+/* =========================
+   DISCLAIMER
+========================= */
+
+.disclaimer {
+    text-align: center;
+
+    color: #444;
+
+    font-size: 10px;
+
+    margin-top: 9px;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 700px) {
+
+    .sidebar {
+        position: fixed;
+
+        left: -260px;
+
+        top: 0;
+
+        bottom: 0;
+
+        z-index: 100;
+
+        transition: 0.25s;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .menu-button {
+        display: block;
+    }
+
+    .mobile-brand {
+        display: flex;
+
+        margin-left: 15px;
+    }
+
+    .messages {
+        padding: 25px 15px;
+    }
+
+    .suggestions {
+        grid-template-columns: 1fr;
+    }
+
+    .message-content {
+        max-width: 88%;
+    }
+
+    .input-area {
+        padding: 8px 12px 12px;
+    }
+}
