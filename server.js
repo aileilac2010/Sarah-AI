@@ -1,4 +1,3 @@
-```javascript
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -7,25 +6,18 @@ const OpenAI = require("openai");
 dotenv.config();
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
-
 app.use(cors());
-
 app.use(express.json());
-
 app.use(express.static("public"));
 
 
-/* CONEXÃO COM BAZAARLINK */
+/* BAZAARLINK */
 
 const client = new OpenAI({
-
     apiKey: process.env.BAZAARLINK_API_KEY,
-
     baseURL: "https://api.bazaarlink.ai/v1"
-
 });
 
 
@@ -37,92 +29,59 @@ app.post("/api/chat", async (req, res) => {
 
         const { messages } = req.body;
 
-
-        /*
-            Verificar se recebemos uma conversa válida
-        */
-
-        if (
-            !Array.isArray(messages) ||
-            messages.length === 0
-        ) {
+        if (!Array.isArray(messages) || messages.length === 0) {
 
             return res.status(400).json({
-
                 error: "Nenhuma mensagem foi enviada."
-
             });
 
         }
 
 
-        /*
-            Limitar o tamanho da conversa
-        */
+        /* Últimas 30 mensagens */
 
-        const recentMessages =
-            messages.slice(-30);
+        const recentMessages = messages.slice(-30);
 
 
-        /*
-            Instrução principal da Sarah
-        */
+        /* Personalidade da Sarah */
 
         const systemMessage = {
-
             role: "system",
 
             content:
                 "Você é Sarah AI, uma assistente de inteligência artificial amigável, inteligente e útil. " +
                 "Responda de forma clara, natural e objetiva. " +
-                "Use o contexto das mensagens anteriores desta conversa para entender perguntas e referências do usuário. " +
-                "Quando a pergunta depender de informações atuais, notícias, acontecimentos recentes, preços, pessoas ou fatos que possam ter mudado, use a pesquisa na internet. " +
-                "Quando utilizar informações encontradas na internet, mencione claramente as fontes quando possível. " +
-                "Não invente informações sobre o usuário. " +
+                "Use o contexto das mensagens anteriores desta conversa. " +
+                "Quando uma pergunta depender de informações atuais, notícias, acontecimentos recentes, preços ou fatos que possam ter mudado, use a pesquisa na internet quando estiver disponível. " +
+                "Quando utilizar informações encontradas na internet, mencione as fontes quando possível. " +
+                "Não invente informações. " +
                 "Se você não souber algo, diga claramente que não sabe."
-
         };
 
 
-        /*
-            Enviar instrução + histórico + acesso à web
-        */
+        /* PEDIDO À BAZAARLINK */
 
-        const completion =
-            await client.chat.completions.create({
+        const completion = await client.chat.completions.create({
 
-                /*
-                    :online ativa o encaminhamento
-                    para pesquisa web quando suportado.
-                */
+            model:
+                process.env.BAZAARLINK_MODEL ||
+                "auto:free",
 
-                model:
-                    process.env.BAZAARLINK_MODEL ||
-                    "auto:free:online",
+            messages: [
+                systemMessage,
+                ...recentMessages
+            ],
 
+            plugins: [
+                {
+                    id: "web"
+                }
+            ]
 
-                messages: [
-                    systemMessage,
-                    ...recentMessages
-                ],
-
-
-                /*
-                    Ativar o plugin de pesquisa web.
-                */
-
-                plugins: [
-                    {
-                        id: "web"
-                    }
-                ]
-
-            });
+        });
 
 
-        /*
-            Obter resposta
-        */
+        /* RESPOSTA */
 
         const reply =
             completion.choices?.[0]?.message?.content;
@@ -137,14 +96,8 @@ app.post("/api/chat", async (req, res) => {
         }
 
 
-        /*
-            Enviar resposta para o navegador
-        */
-
         res.json({
-
             reply: reply
-
         });
 
 
@@ -155,12 +108,9 @@ app.post("/api/chat", async (req, res) => {
             error
         );
 
-
         res.status(500).json({
-
             error:
                 "Não foi possível obter uma resposta da Sarah AI."
-
         });
 
     }
@@ -171,5 +121,9 @@ app.post("/api/chat", async (req, res) => {
 /* SERVIDOR */
 
 app.listen(PORT, () => {
-    console.log("Sarah AI rodando na porta " + PORT);
+
+    console.log(
+        "Sarah AI rodando na porta " + PORT
+    );
+
 });
