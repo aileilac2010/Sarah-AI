@@ -3,6 +3,14 @@ const input = document.getElementById("message");
 const messages = document.getElementById("messages");
 const sendButton = document.getElementById("send-button");
 
+/*
+    HISTÓRICO DA CONVERSA
+
+    Guarda todas as mensagens enquanto
+    esta página estiver aberta.
+*/
+let conversationHistory = [];
+
 
 /* ENVIAR MENSAGEM */
 
@@ -15,13 +23,20 @@ form.addEventListener("submit", async (event) => {
     if (!message) return;
 
 
+    // Mostrar mensagem do usuário
     addMessage(message, "user");
 
     input.value = "";
-
     input.style.height = "auto";
 
     sendButton.disabled = true;
+
+
+    // Adicionar ao histórico
+    conversationHistory.push({
+        role: "user",
+        content: message
+    });
 
 
     const thinkingMessage = addMessage(
@@ -41,7 +56,10 @@ form.addEventListener("submit", async (event) => {
             },
 
             body: JSON.stringify({
-                message: message
+
+                // Agora enviamos TODA a conversa
+                messages: conversationHistory
+
             })
 
         });
@@ -63,15 +81,25 @@ form.addEventListener("submit", async (event) => {
         }
 
 
-        addMessage(
-            data.reply,
-            "ai"
-        );
+        // Mostrar resposta
+        addMessage(data.reply, "ai");
+
+
+        // Guardar resposta da Sarah
+        conversationHistory.push({
+            role: "assistant",
+            content: data.reply
+        });
 
 
     } catch (error) {
 
         thinkingMessage.remove();
+
+
+        // Se houve erro, removemos a última
+        // mensagem do usuário do histórico
+        conversationHistory.pop();
 
 
         addMessage(
@@ -93,7 +121,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 
-/* ADICIONAR MENSAGEM */
+/* ADICIONAR MENSAGEM NA INTERFACE */
 
 function addMessage(text, type) {
 
@@ -130,6 +158,10 @@ function addMessage(text, type) {
 /* NOVO CHAT */
 
 function newChat() {
+
+    // Apagar memória da conversa atual
+    conversationHistory = [];
+
 
     messages.innerHTML = `
 
@@ -226,7 +258,7 @@ function toggleSidebar() {
 }
 
 
-/* TEXTAREA AUTOMÁTICA */
+/* TEXTAREA */
 
 input.addEventListener("input", () => {
 
