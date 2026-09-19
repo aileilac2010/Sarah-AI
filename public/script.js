@@ -1,219 +1,131 @@
-/* =========================================================
-   SARAH AI
-   Frontend Chat Engine
-   ========================================================= */
-
-
-/* =========================================================
-   STATE
-   ========================================================= */
-
 let conversationHistory = [];
-
 let isGenerating = false;
 
-let currentConversationTitle = "Nova conversa";
+const chatContainer = document.getElementById("messages");
+const messageInput = document.getElementById("message");
+const sendButton = document.getElementById("send-button");
+const chatForm = document.getElementById("chat-form");
+const welcomeScreen = document.querySelector(".welcome");
+const sidebar = document.getElementById("sidebar");
 
-
-/* =========================================================
-   ELEMENTS
-   ========================================================= */
-
-const messagesContainer =
-    document.getElementById("messages");
-
-const messageInput =
-    document.getElementById("message");
-
-const sendButton =
-    document.getElementById("send-button");
-
-const chatForm =
-    document.getElementById("chat-form");
-
-const sidebar =
-    document.getElementById("sidebar");
-
-const sidebarOverlay =
-    document.getElementById("sidebar-overlay");
-
-const conversationList =
-    document.getElementById("conversation-list");
-
-
-/* =========================================================
-   SCROLL
-   ========================================================= */
+// ==========================================
+// SCROLL
+// ==========================================
 
 function scrollToBottom() {
+    if (!chatContainer) return;
 
-    if (!messagesContainer) return;
-
-    messagesContainer.scrollTop =
-        messagesContainer.scrollHeight;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// ==========================================
+// MARKDOWN
+// ==========================================
 
-/* =========================================================
-   ADD MESSAGE
-   ========================================================= */
+function renderMarkdown(text) {
+    if (!text) return "";
 
-function addMessage(
-    text,
-    type,
-    webSearch = false
-) {
-
-    if (!messagesContainer) {
-        return null;
+    if (typeof marked === "undefined") {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
     }
 
+    return marked.parse(text, {
+        breaks: true,
+        gfm: true
+    });
+}
 
-    const message =
-        document.createElement("div");
+// ==========================================
+// ADICIONAR MENSAGEM
+// ==========================================
 
-    message.className =
-        `message ${type}`;
+function addMessage(text, type, webSearch = false) {
+    if (!chatContainer) return null;
 
+    const messageWrapper = document.createElement("div");
+    messageWrapper.className = `message ${type}`;
 
-    const bubble =
-        document.createElement("div");
+    const messageBubble = document.createElement("div");
+    messageBubble.className = "message-bubble";
 
-    bubble.className =
-        "message-bubble";
+    // Indicador de pesquisa
+    if (type === "assistant" && webSearch) {
+        const webIndicator = document.createElement("div");
 
-
-    /* Web indicator */
-
-    if (
-        type === "assistant" &&
-        webSearch
-    ) {
-
-        const webIndicator =
-            document.createElement("div");
-
-        webIndicator.className =
-            "web-source";
-
+        webIndicator.className = "web-source";
         webIndicator.textContent =
             "🌐 Pesquisa na internet ativada";
 
-        bubble.appendChild(webIndicator);
+        messageBubble.appendChild(webIndicator);
     }
 
+    const textElement = document.createElement("div");
+    textElement.className = "message-text";
 
-    /* Text */
+    if (type === "assistant") {
+        textElement.innerHTML = renderMarkdown(text);
+    } else {
+        // Mensagens do usuário continuam como texto normal
+        textElement.textContent = text || "";
+    }
 
-    const textElement =
-        document.createElement("div");
+    messageBubble.appendChild(textElement);
+    messageWrapper.appendChild(messageBubble);
 
-    textElement.className =
-        "message-text";
-
-    textElement.textContent =
-        text || "";
-
-
-    bubble.appendChild(textElement);
-
-    message.appendChild(bubble);
-
-    messagesContainer.appendChild(message);
-
+    chatContainer.appendChild(messageWrapper);
 
     scrollToBottom();
-
 
     return textElement;
 }
 
-
-/* =========================================================
-   THINKING
-   ========================================================= */
+// ==========================================
+// PENSANDO
+// ==========================================
 
 function showThinking() {
+    if (!chatContainer) return;
 
-    if (!messagesContainer) {
-        return;
-    }
-
-
-    removeThinking();
-
-
-    const thinking =
-        document.createElement("div");
+    const thinking = document.createElement("div");
 
     thinking.className =
         "message assistant thinking-message";
 
-    thinking.id =
-        "thinking-message";
-
+    thinking.id = "thinking-message";
 
     thinking.innerHTML = `
         <div class="message-bubble">
-
             <div class="thinking-dots">
-
                 <span></span>
                 <span></span>
                 <span></span>
-
             </div>
-
         </div>
     `;
 
-
-    messagesContainer.appendChild(thinking);
+    chatContainer.appendChild(thinking);
 
     scrollToBottom();
 }
 
-
 function removeThinking() {
-
     const thinking =
-        document.getElementById(
-            "thinking-message"
-        );
+        document.getElementById("thinking-message");
 
     if (thinking) {
         thinking.remove();
     }
 }
 
-
-/* =========================================================
-   HIDE WELCOME
-   ========================================================= */
-
-function hideWelcome() {
-
-    const welcome =
-        document.querySelector(".welcome");
-
-    if (welcome) {
-
-        welcome.style.display =
-            "none";
-    }
-}
-
-
-/* =========================================================
-   SEND MESSAGE
-   ========================================================= */
+// ==========================================
+// ENVIAR MENSAGEM
+// ==========================================
 
 async function sendMessage() {
-
-    if (isGenerating) {
-        return;
-    }
-
+    if (isGenerating) return;
 
     if (!messageInput) {
         console.error(
@@ -223,260 +135,144 @@ async function sendMessage() {
         return;
     }
 
+    const text = messageInput.value.trim();
 
-    const text =
-        messageInput.value.trim();
-
-
-    if (!text) {
-        return;
-    }
-
-
-    /* Clear input */
+    if (!text) return;
 
     messageInput.value = "";
+    messageInput.style.height = "auto";
 
-    messageInput.style.height =
-        "auto";
-
-
-    hideWelcome();
-
-
-    /* User message */
-
-    addMessage(
-        text,
-        "user"
-    );
-
-
-    /* History */
-
-    conversationHistory.push({
-
-        role: "user",
-
-        content: text
-
-    });
-
-
-    /* Title */
-
-    if (
-        currentConversationTitle ===
-        "Nova conversa"
-    ) {
-
-        currentConversationTitle =
-            createConversationTitle(text);
-
-        updateConversationTitle();
+    if (welcomeScreen) {
+        welcomeScreen.style.display = "none";
     }
 
+    // Mensagem do usuário
+    addMessage(text, "user");
+
+    conversationHistory.push({
+        role: "user",
+        content: text
+    });
 
     isGenerating = true;
 
-
     if (sendButton) {
-
-        sendButton.disabled =
-            true;
+        sendButton.disabled = true;
     }
-
 
     showThinking();
 
-
     try {
+        const response = await fetch("/api/chat", {
+            method: "POST",
 
-        const response =
-            await fetch(
-                "/api/chat",
-                {
+            headers: {
+                "Content-Type": "application/json"
+            },
 
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            messages:
-                                conversationHistory
-
-                        })
-                }
-            );
-
-
-        /* HTTP error */
+            body: JSON.stringify({
+                messages: conversationHistory
+            })
+        });
 
         if (!response.ok) {
-
             let errorMessage =
                 "Erro no servidor.";
 
             try {
-
-                const data =
+                const errorData =
                     await response.json();
 
-                if (data.error) {
-
+                if (errorData.error) {
                     errorMessage =
-                        data.error;
+                        errorData.error;
                 }
+            } catch (e) {}
 
-            } catch (error) {
-                /* Ignore */
-            }
-
-            throw new Error(
-                errorMessage
-            );
+            throw new Error(errorMessage);
         }
 
-
-        /* Streaming not available */
-
         if (!response.body) {
-
             throw new Error(
                 "O servidor não enviou uma resposta."
             );
         }
 
-
         const reader =
             response.body.getReader();
 
-
         const decoder =
-            new TextDecoder(
-                "utf-8"
-            );
-
+            new TextDecoder("utf-8");
 
         let buffer = "";
 
         let fullResponse = "";
 
-        let assistantTextElement =
-            null;
+        let assistantTextElement = null;
 
         let webSearch = false;
 
-
-        /* =================================================
-           READ STREAM
-           ================================================= */
+        // ======================================
+        // STREAM
+        // ======================================
 
         while (true) {
-
             const {
                 value,
                 done
             } = await reader.read();
 
+            if (done) break;
 
-            if (done) {
-                break;
-            }
-
-
-            buffer +=
-                decoder.decode(
-                    value,
-                    {
-                        stream: true
-                    }
-                );
-
+            buffer += decoder.decode(
+                value,
+                {
+                    stream: true
+                }
+            );
 
             const events =
                 buffer.split("\n\n");
 
+            buffer = events.pop();
 
-            buffer =
-                events.pop();
-
-
-            for (
-                const event
-                of events
-            ) {
-
-                const lines =
-                    event.split("\n");
-
-
-                const dataLine =
-                    lines.find(
-                        line =>
-                            line.startsWith(
-                                "data:"
-                            )
+            for (const event of events) {
+                const line = event
+                    .split("\n")
+                    .find((line) =>
+                        line.startsWith("data:")
                     );
 
-
-                if (!dataLine) {
-                    continue;
-                }
-
+                if (!line) continue;
 
                 const jsonText =
-                    dataLine
-                        .substring(5)
-                        .trim();
+                    line.substring(5).trim();
 
-
-                if (!jsonText) {
-                    continue;
-                }
-
+                if (!jsonText) continue;
 
                 let data;
 
-
                 try {
-
                     data =
-                        JSON.parse(
-                            jsonText
-                        );
-
+                        JSON.parse(jsonText);
                 } catch (error) {
-
                     console.warn(
-                        "Evento SSE inválido:",
+                        "Evento inválido:",
                         jsonText
                     );
 
                     continue;
                 }
 
+                // ==================================
+                // INÍCIO
+                // ==================================
 
-                /* START */
-
-                if (
-                    data.type ===
-                    "start"
-                ) {
-
+                if (data.type === "start") {
                     webSearch =
-                        Boolean(
-                            data.webSearch
-                        );
-
+                        Boolean(data.webSearch);
 
                     removeThinking();
-
 
                     assistantTextElement =
                         addMessage(
@@ -486,21 +282,14 @@ async function sendMessage() {
                         );
                 }
 
+                // ==================================
+                // TEXTO
+                // ==================================
 
-                /* TEXT */
-
-                else if (
-                    data.type ===
-                    "text"
-                ) {
-
+                else if (data.type === "text") {
                     removeThinking();
 
-
-                    if (
-                        !assistantTextElement
-                    ) {
-
+                    if (!assistantTextElement) {
                         assistantTextElement =
                             addMessage(
                                 "",
@@ -509,63 +298,41 @@ async function sendMessage() {
                             );
                     }
 
+                    // Guardamos a resposta completa
+                    fullResponse += data.content;
 
-                    assistantTextElement
-                        .textContent +=
-                        data.content;
-
-
-                    fullResponse +=
-                        data.content;
-
+                    // Renderizamos o Markdown
+                    assistantTextElement.innerHTML =
+                        renderMarkdown(
+                            fullResponse
+                        );
 
                     scrollToBottom();
                 }
 
+                // ==================================
+                // ERRO
+                // ==================================
 
-                /* ERROR */
-
-                else if (
-                    data.type ===
-                    "error"
-                ) {
-
+                else if (data.type === "error") {
                     throw new Error(
                         data.error ||
                         "Erro ao gerar resposta."
                     );
                 }
-
-
-                /* DONE */
-
-                else if (
-                    data.type ===
-                    "done"
-                ) {
-
-                    removeThinking();
-                }
-
             }
         }
 
+        // ======================================
+        // GUARDAR HISTÓRICO
+        // ======================================
 
-        /* =================================================
-           SAVE ASSISTANT MESSAGE
-           ================================================= */
-
-        if (fullResponse.trim()) {
-
+        if (fullResponse) {
             conversationHistory.push({
-
                 role: "assistant",
-
                 content: fullResponse
-
             });
         }
-
 
     } catch (error) {
 
@@ -574,439 +341,43 @@ async function sendMessage() {
             error
         );
 
-
         removeThinking();
-
 
         addMessage(
             "Desculpa, ocorreu um erro ao falar com o servidor.",
             "assistant"
         );
-
-    } finally {
-
-        isGenerating =
-            false;
-
-
-        if (sendButton) {
-
-            sendButton.disabled =
-                false;
-        }
-
-
-        if (messageInput) {
-
-            messageInput.focus();
-        }
-
-    }
-}
-
-
-/* =========================================================
-   NEW CHAT
-   ========================================================= */
-
-function newChat() {
-
-    if (isGenerating) {
-        return;
     }
 
+    isGenerating = false;
 
-    conversationHistory = [];
-
-
-    currentConversationTitle =
-        "Nova conversa";
-
-
-    if (!messagesContainer) {
-        return;
+    if (sendButton) {
+        sendButton.disabled = false;
     }
-
-
-    messagesContainer.innerHTML = "";
-
-
-    const welcome =
-        document.createElement(
-            "div"
-        );
-
-
-    welcome.className =
-        "welcome";
-
-
-    welcome.innerHTML = `
-
-        <div class="welcome-logo">
-            S
-        </div>
-
-        <h1>
-            Olá, eu sou a
-            <span>Sarah.</span>
-        </h1>
-
-        <p>
-            Sua assistente de inteligência artificial.
-        </p>
-
-
-        <div class="suggestions">
-
-
-            <button
-                type="button"
-                onclick="useSuggestion('Explique-me um assunto de forma simples')"
-            >
-
-                <div class="suggestion-icon">
-                    ✦
-                </div>
-
-                <div class="suggestion-content">
-
-                    <strong>
-                        Aprender
-                    </strong>
-
-                    <span>
-                        Explique um assunto para mim
-                    </span>
-
-                </div>
-
-            </button>
-
-
-            <button
-                type="button"
-                onclick="useSuggestion('Ajude-me a criar uma ideia criativa')"
-            >
-
-                <div class="suggestion-icon">
-                    ✨
-                </div>
-
-                <div class="suggestion-content">
-
-                    <strong>
-                        Criar
-                    </strong>
-
-                    <span>
-                        Ajude-me com uma ideia criativa
-                    </span>
-
-                </div>
-
-            </button>
-
-
-            <button
-                type="button"
-                onclick="useSuggestion('Pesquise e explique este assunto para mim')"
-            >
-
-                <div class="suggestion-icon">
-                    ◉
-                </div>
-
-                <div class="suggestion-content">
-
-                    <strong>
-                        Explorar
-                    </strong>
-
-                    <span>
-                        Descubra algo novo
-                    </span>
-
-                </div>
-
-            </button>
-
-
-            <button
-                type="button"
-                onclick="useSuggestion('Ajude-me a resolver este problema')"
-            >
-
-                <div class="suggestion-icon">
-                    ◇
-                </div>
-
-                <div class="suggestion-content">
-
-                    <strong>
-                        Resolver
-                    </strong>
-
-                    <span>
-                        Ajude-me com um problema
-                    </span>
-
-                </div>
-
-            </button>
-
-
-        </div>
-    `;
-
-
-    messagesContainer.appendChild(
-        welcome
-    );
-
-
-    updateConversationTitle();
-
 
     if (messageInput) {
-
-        messageInput.value = "";
-
-        messageInput.style.height =
-            "auto";
-
         messageInput.focus();
     }
-
-
-    closeSidebarOnMobile();
 }
 
-
-/* =========================================================
-   SUGGESTION
-   ========================================================= */
-
-function useSuggestion(text) {
-
-    if (!messageInput) {
-        return;
-    }
-
-
-    messageInput.value =
-        text;
-
-
-    messageInput.focus();
-
-
-    autoResizeTextarea();
-}
-
-
-/* =========================================================
-   TEXTAREA AUTO RESIZE
-   ========================================================= */
-
-function autoResizeTextarea() {
-
-    if (!messageInput) {
-        return;
-    }
-
-
-    messageInput.style.height =
-        "auto";
-
-
-    messageInput.style.height =
-        Math.min(
-            messageInput.scrollHeight,
-            160
-        ) + "px";
-}
-
-
-/* =========================================================
-   CREATE TITLE
-   ========================================================= */
-
-function createConversationTitle(
-    text
-) {
-
-    const clean =
-        text
-            .replace(/\s+/g, " ")
-            .trim();
-
-
-    if (!clean) {
-        return "Nova conversa";
-    }
-
-
-    if (clean.length <= 32) {
-        return clean;
-    }
-
-
-    return (
-        clean.substring(0, 32)
-        + "..."
-    );
-}
-
-
-/* =========================================================
-   UPDATE SIDEBAR TITLE
-   ========================================================= */
-
-function updateConversationTitle() {
-
-    if (!conversationList) {
-        return;
-    }
-
-
-    conversationList.innerHTML = "";
-
-
-    const item =
-        document.createElement(
-            "button"
-        );
-
-
-    item.className =
-        "conversation-item active";
-
-
-    item.type =
-        "button";
-
-
-    item.onclick =
-        function () {
-            scrollToBottom();
-        };
-
-
-    item.innerHTML = `
-
-        <span class="conversation-icon">
-            💬
-        </span>
-
-        <span class="conversation-name">
-            ${escapeHTML(
-                currentConversationTitle
-            )}
-        </span>
-
-    `;
-
-
-    conversationList.appendChild(
-        item
-    );
-}
-
-
-/* =========================================================
-   ESCAPE HTML
-   ========================================================= */
-
-function escapeHTML(text) {
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-    div.textContent =
-        text;
-
-    return div.innerHTML;
-}
-
-
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-function toggleSidebar() {
-
-    if (!sidebar) {
-        return;
-    }
-
-
-    sidebar.classList.toggle(
-        "open"
-    );
-
-
-    if (sidebarOverlay) {
-
-        const isOpen =
-            sidebar.classList.contains(
-                "open"
-            );
-
-
-        sidebarOverlay.style.display =
-            isOpen
-                ? "block"
-                : "";
-    }
-}
-
-
-function closeSidebarOnMobile() {
-
-    if (
-        window.innerWidth <= 900 &&
-        sidebar
-    ) {
-
-        sidebar.classList.remove(
-            "open"
-        );
-
-
-        if (sidebarOverlay) {
-
-            sidebarOverlay.style.display =
-                "";
-        }
-    }
-}
-
-
-/* =========================================================
-   FORM
-   ========================================================= */
+// ==========================================
+// FORMULÁRIO
+// ==========================================
 
 if (chatForm) {
-
     chatForm.addEventListener(
         "submit",
         function (event) {
-
             event.preventDefault();
 
             sendMessage();
-
         }
     );
 }
 
-
-/* =========================================================
-   ENTER / SHIFT + ENTER
-   ========================================================= */
+// ==========================================
+// ENTER
+// ==========================================
 
 if (messageInput) {
 
@@ -1018,59 +389,169 @@ if (messageInput) {
                 event.key === "Enter" &&
                 !event.shiftKey
             ) {
-
                 event.preventDefault();
 
                 sendMessage();
             }
-
         }
     );
 
+    // ======================================
+    // AUTO HEIGHT
+    // ======================================
 
     messageInput.addEventListener(
         "input",
         function () {
 
-            autoResizeTextarea();
+            this.style.height = "auto";
 
+            this.style.height =
+                this.scrollHeight + "px";
         }
     );
 }
 
+// ==========================================
+// NOVO CHAT
+// ==========================================
 
-/* =========================================================
-   MOBILE RESIZE
-   ========================================================= */
+function newChat() {
 
-window.addEventListener(
-    "resize",
-    function () {
+    conversationHistory = [];
 
-        if (
-            window.innerWidth > 900 &&
-            sidebar
-        ) {
+    if (!chatContainer) return;
 
-            sidebar.classList.remove(
-                "open"
-            );
+    chatContainer.innerHTML = "";
 
+    const welcome =
+        document.createElement("div");
 
-            if (sidebarOverlay) {
+    welcome.className = "welcome";
 
-                sidebarOverlay.style.display =
-                    "";
-            }
-        }
+    welcome.innerHTML = `
+        <div class="welcome-logo">S</div>
 
+        <h1>
+            Olá, eu sou a
+            <span>Sarah.</span>
+        </h1>
+
+        <p>
+            Sua assistente de inteligência artificial.
+        </p>
+
+        <div class="suggestions">
+
+            <button
+                type="button"
+                onclick="useSuggestion(
+                    'Explique-me um assunto de forma simples'
+                )"
+            >
+                <span>💡</span>
+
+                <strong>Aprender</strong>
+
+                <small>
+                    Explique um assunto para mim
+                </small>
+            </button>
+
+            <button
+                type="button"
+                onclick="useSuggestion(
+                    'Ajude-me a criar uma ideia criativa'
+                )"
+            >
+                <span>✨</span>
+
+                <strong>Criar</strong>
+
+                <small>
+                    Ajude-me com uma ideia criativa
+                </small>
+            </button>
+
+            <button
+                type="button"
+                onclick="useSuggestion(
+                    'Pesquise e explique este assunto para mim'
+                )"
+            >
+                <span>🔎</span>
+
+                <strong>Explorar</strong>
+
+                <small>
+                    Quero descobrir algo novo
+                </small>
+            </button>
+
+            <button
+                type="button"
+                onclick="useSuggestion(
+                    'Ajude-me a resolver este problema'
+                )"
+            >
+                <span>🧠</span>
+
+                <strong>Resolver</strong>
+
+                <small>
+                    Ajude-me com um problema
+                </small>
+            </button>
+
+        </div>
+    `;
+
+    chatContainer.appendChild(welcome);
+
+    if (messageInput) {
+
+        messageInput.value = "";
+
+        messageInput.style.height =
+            "auto";
+
+        messageInput.focus();
     }
-);
+}
 
+// ==========================================
+// SUGESTÕES
+// ==========================================
 
-/* =========================================================
-   GLOBAL FUNCTIONS
-   ========================================================= */
+function useSuggestion(text) {
+
+    if (!messageInput) return;
+
+    messageInput.value = text;
+
+    messageInput.focus();
+
+    messageInput.style.height =
+        "auto";
+
+    messageInput.style.height =
+        messageInput.scrollHeight + "px";
+}
+
+// ==========================================
+// SIDEBAR
+// ==========================================
+
+function toggleSidebar() {
+
+    if (!sidebar) return;
+
+    sidebar.classList.toggle("open");
+}
+
+// ==========================================
+// EXPOR FUNÇÕES
+// ==========================================
 
 window.sendMessage =
     sendMessage;
@@ -1083,20 +564,3 @@ window.useSuggestion =
 
 window.toggleSidebar =
     toggleSidebar;
-
-
-/* =========================================================
-   STARTUP
-   ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        if (messageInput) {
-
-            messageInput.focus();
-        }
-
-    }
-);
