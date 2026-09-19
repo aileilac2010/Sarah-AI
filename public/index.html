@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sarah AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo">S</div>
+                <div>
+                    <h1>Sarah AI</h1>
+                    <span>Seu assistente de IA</span>
+                </div>
+            </div>
+
+            <button class="new-chat" onclick="newChat()">
+                + Novo chat
+            </button>
+        </header>
+
+
+        <main class="chat-container">
+
+            <div id="messages" class="messages">
+
+                <div class="welcome">
+                    <div class="welcome-logo">S</div>
+
+                    <h2>Olá, eu sou a Sarah. 👋</h2>
+
+                    <p>
+                        Como posso ajudar você hoje?
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="input-area">
+
+                <form id="chat-form">
+
+                    <div class="input-box">
+
+                        <textarea
+                            id="message"
+                            placeholder="Pergunte alguma coisa..."
+                            rows="1"
+                            required
+                        ></textarea>
+
+                        <button type="submit" id="send-button">
+                            ➤
+                        </button>
+
+                    </div>
+
+                </form>
+
+                <p class="disclaimer">
+                    A Sarah AI pode cometer erros. Verifique informações importantes.
+                </p>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
