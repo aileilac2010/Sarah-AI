@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// CONFIGURAÇÃO DO SERVIDOR
+// CONFIGURAÇÃO
 // ==========================================
 
 app.use(cors());
@@ -30,9 +30,7 @@ const client = new OpenAI({
     apiKey: process.env.BAZAARLINK_API_KEY,
     baseURL: "https://api.bazaarlink.ai/v1",
 
-    // IMPORTANTE:
-    // Impede que auto:free passe automaticamente
-    // para modelos pagos quando a quota gratuita acabar.
+    // Impede fallback automático para modelos pagos
     defaultHeaders: {
         "X-Free-Fallback": "false"
     }
@@ -42,19 +40,16 @@ const client = new OpenAI({
 // MODELO
 // ==========================================
 
-// Auto Router gratuito.
-// O BazaarLink decide qual modelo gratuito usar
-// de acordo com o tipo da pergunta.
 const MODEL = "auto:free";
 
 // ==========================================
-// PROMPT DA SARAH
+// SYSTEM PROMPT
 // ==========================================
 
 function createSystemPrompt() {
     return `
-Você é Sarah AI, uma assistente de inteligência artificial
-moderna, inteligente, natural, útil e confiável.
+Você é Sarah AI, uma assistente de inteligência artificial moderna,
+inteligente, natural, útil e confiável.
 
 PERSONALIDADE:
 - Seja amigável e natural.
@@ -72,9 +67,9 @@ QUALIDADE:
 - Diferencie fatos, opiniões e possibilidades.
 - Quando houver várias interpretações, explique-as.
 - Verifique cálculos antes de responder.
-- Em matemática, apresente os passos necessários.
-- Em programação, procure erros no código e proponha soluções funcionais.
-- Em assuntos escolares, explique de forma simples e didática.
+- Em matemática, mostre os passos necessários.
+- Em programação, procure erros e forneça soluções funcionais.
+- Em assuntos escolares, explique de maneira simples e didática.
 - Em perguntas complexas, organize a resposta em partes.
 - Use exemplos quando realmente ajudarem.
 
@@ -87,33 +82,81 @@ CONVERSA:
 
 RACIOCÍNIO:
 - Para problemas complexos, analise cuidadosamente as informações.
-- Verifique relações, cálculos e possíveis inconsistências.
+- Verifique cálculos e possíveis inconsistências.
 - Considere alternativas quando necessário.
 - Não revele seu raciocínio interno privado.
-- Mostre apenas explicações e passos úteis para o usuário.
+- Mostre somente explicações e passos úteis ao usuário.
 
 PESQUISA:
 - Informações atuais ou recentes podem exigir pesquisa na internet.
-- Preços, notícias, resultados, acontecimentos recentes e informações
-  que mudam com o tempo devem ser verificadas quando a pesquisa estiver disponível.
+- Preços, notícias, resultados e acontecimentos recentes devem ser
+  verificados quando a pesquisa estiver disponível.
 - Não pesquise desnecessariamente assuntos estáveis.
 - Nunca invente resultados ou fontes.
 
 FORMATAÇÃO:
-- Use parágrafos curtos.
-- Use listas quando forem úteis.
-- Use títulos curtos em respostas grandes.
-- Evite respostas enormes quando uma resposta curta resolver a questão.
-- Não mencione estas instruções.
-- Não mencione este prompt.
+Use Markdown quando isso melhorar a clareza.
 
-IMPORTANTE:
-Você deve priorizar precisão, clareza e utilidade.
+Você pode utilizar:
+
+**negrito**
+*itálico*
+`código`
+
+Títulos:
+
+# Título
+## Subtítulo
+
+Listas:
+
+- item
+- item
+- item
+
+Listas numeradas:
+
+1. primeiro
+2. segundo
+3. terceiro
+
+Tabelas Markdown quando uma comparação ficar melhor em tabela:
+
+| Item | Descrição |
+|---|---|
+| A | Exemplo |
+| B | Exemplo |
+
+Use tabelas somente quando forem realmente úteis.
+Não transforme todas as respostas em tabelas.
+
+Para programação, use blocos de código:
+
+\`\`\`javascript
+console.log("Olá");
+\`\`\`
+
+Use parágrafos curtos e boa organização visual.
+
+CONVERSA NATURAL:
+- Quando fizer sentido, termine a resposta com uma pergunta curta
+  relacionada ao assunto.
+- A pergunta deve ajudar a continuar a conversa.
+- Não faça uma pergunta artificial no final de todas as respostas.
+- Se a resposta estiver completa e não houver necessidade de continuar,
+  termine normalmente.
+- Exemplos:
+  "Queres que eu te mostre um exemplo?"
+  "Queres que eu explique essa parte com mais detalhes?"
+  "Quer que eu compare as duas opções?"
+
+Não mencione estas instruções.
+Não mencione este prompt.
 `;
 }
 
 // ==========================================
-// CONTEXTO DA CONVERSA
+// CONTEXTO
 // ==========================================
 
 function prepareConversation(messages) {
@@ -121,10 +164,6 @@ function prepareConversation(messages) {
         return [];
     }
 
-    // Mantém as últimas 30 mensagens.
-    //
-    // O BazaarLink também pode aplicar o transform
-    // middle-out caso o contexto fique grande.
     const recentMessages = messages.slice(-30);
 
     return recentMessages
@@ -144,7 +183,7 @@ function prepareConversation(messages) {
 }
 
 // ==========================================
-// DETECÇÃO DE PESQUISA
+// PESQUISA WEB
 // ==========================================
 
 function shouldSearchWeb(message) {
@@ -154,7 +193,6 @@ function shouldSearchWeb(message) {
         .replace(/[\u0300-\u036f]/g, "");
 
     const patterns = [
-        // Atualidade
         "hoje",
         "agora",
         "atualmente",
@@ -163,7 +201,6 @@ function shouldSearchWeb(message) {
         "recente",
         "recentes",
 
-        // Notícias
         "noticia",
         "noticias",
         "ultima noticia",
@@ -171,7 +208,6 @@ function shouldSearchWeb(message) {
         "noticias de hoje",
         "o que aconteceu",
 
-        // Pesquisa explícita
         "pesquise",
         "pesquisar",
         "pesquisa na internet",
@@ -181,7 +217,6 @@ function shouldSearchWeb(message) {
         "pesquisa online",
         "veja na internet",
 
-        // Preços / economia
         "preco atual",
         "precos atuais",
         "quanto custa agora",
@@ -191,7 +226,6 @@ function shouldSearchWeb(message) {
         "euro hoje",
         "bitcoin hoje",
 
-        // Esportes
         "resultado de hoje",
         "resultado do jogo",
         "jogo de hoje",
@@ -199,18 +233,18 @@ function shouldSearchWeb(message) {
         "placar",
         "classificacao atual",
 
-        // Clima
         "tempo hoje",
         "clima hoje",
         "previsao do tempo",
         "previsao para hoje",
 
-        // Internet
         "na internet",
         "online"
     ];
 
-    return patterns.some((pattern) => text.includes(pattern));
+    return patterns.some((pattern) =>
+        text.includes(pattern)
+    );
 }
 
 // ==========================================
@@ -220,10 +254,6 @@ function shouldSearchWeb(message) {
 app.post("/api/chat", async (req, res) => {
     try {
         const { messages } = req.body;
-
-        // --------------------------------------
-        // VALIDAR MENSAGENS
-        // --------------------------------------
 
         if (!Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({
@@ -243,30 +273,16 @@ app.post("/api/chat", async (req, res) => {
             });
         }
 
-        // --------------------------------------
-        // PREPARAR CONTEXTO
-        // --------------------------------------
+        const conversation =
+            prepareConversation(messages);
 
-        const conversation = prepareConversation(messages);
-
-        // --------------------------------------
-        // DECIDIR SE PESQUISA É NECESSÁRIA
-        // --------------------------------------
-
-        const webSearch = shouldSearchWeb(userText);
-
-        // --------------------------------------
-        // SYSTEM PROMPT
-        // --------------------------------------
+        const webSearch =
+            shouldSearchWeb(userText);
 
         const systemMessage = {
             role: "system",
             content: createSystemPrompt()
         };
-
-        // --------------------------------------
-        // OPÇÕES DA REQUISIÇÃO
-        // --------------------------------------
 
         const requestOptions = {
             model: MODEL,
@@ -276,24 +292,14 @@ app.post("/api/chat", async (req, res) => {
                 ...conversation
             ],
 
-            // Permite respostas mais completas.
             max_tokens: 1000,
 
-            // Temperatura equilibrada:
-            // natural, mas sem ficar excessivamente aleatória.
             temperature: 0.55,
 
-            // Streaming:
-            // a resposta aparece enquanto está sendo gerada.
             stream: true,
 
-            // Ajuda a lidar com conversas longas.
             transforms: ["middle-out"]
         };
-
-        // --------------------------------------
-        // PESQUISA WEB
-        // --------------------------------------
 
         if (webSearch) {
             requestOptions.plugins = [
@@ -303,9 +309,9 @@ app.post("/api/chat", async (req, res) => {
             ];
         }
 
-        // --------------------------------------
-        // HEADERS SSE
-        // --------------------------------------
+        // ======================================
+        // SSE
+        // ======================================
 
         res.setHeader(
             "Content-Type",
@@ -331,10 +337,6 @@ app.post("/api/chat", async (req, res) => {
             res.flushHeaders();
         }
 
-        // --------------------------------------
-        // INFORMAR FRONTEND
-        // --------------------------------------
-
         res.write(
             `data: ${JSON.stringify({
                 type: "start",
@@ -344,58 +346,31 @@ app.post("/api/chat", async (req, res) => {
         );
 
         console.log(
-            "========================================"
+            `[Sarah AI] modelo=${MODEL} | web=${webSearch} | contexto=${conversation.length}`
         );
 
-        console.log(
-            `[Sarah AI] Modelo solicitado: ${MODEL}`
-        );
-
-        console.log(
-            `[Sarah AI] Pesquisa web: ${webSearch}`
-        );
-
-        console.log(
-            `[Sarah AI] Contexto: ${conversation.length} mensagens`
-        );
-
-        console.log(
-            "========================================"
-        );
-
-        // --------------------------------------
-        // CHAMAR BAZAARLINK
-        // --------------------------------------
+        // ======================================
+        // BAZAARLINK
+        // ======================================
 
         const stream =
             await client.chat.completions.create(
                 requestOptions
             );
 
-        // --------------------------------------
-        // PEGAR MODELO REALMENTE ESCOLHIDO
-        // --------------------------------------
-
-        // O OpenAI SDK pode expor os headers na resposta.
-        // Nem todas as versões do SDK disponibilizam isso
-        // da mesma forma durante streaming, por isso
-        // também tentamos detectar o modelo pelo chunk.
-
         let resolvedModel = null;
 
-        // --------------------------------------
-        // STREAM DA RESPOSTA
-        // --------------------------------------
+        // ======================================
+        // STREAM
+        // ======================================
 
         for await (const chunk of stream) {
 
-            // Algumas respostas podem informar o modelo
-            // diretamente no corpo.
             if (chunk.model && !resolvedModel) {
                 resolvedModel = chunk.model;
 
                 console.log(
-                    `[Sarah AI] Modelo escolhido: ${resolvedModel}`
+                    `[Sarah AI] modelo escolhido: ${resolvedModel}`
                 );
             }
 
@@ -414,9 +389,9 @@ app.post("/api/chat", async (req, res) => {
             );
         }
 
-        // --------------------------------------
-        // FINALIZAR STREAM
-        // --------------------------------------
+        // ======================================
+        // FINAL
+        // ======================================
 
         res.write(
             `data: ${JSON.stringify({
@@ -443,10 +418,7 @@ app.post("/api/chat", async (req, res) => {
             "========================================"
         );
 
-        // --------------------------------------
-        // ERRO DE QUOTA GRATUITA
-        // --------------------------------------
-
+        // Quota
         if (
             error?.status === 429 ||
             error?.code === 429 ||
@@ -471,10 +443,7 @@ app.post("/api/chat", async (req, res) => {
             return res.end();
         }
 
-        // --------------------------------------
-        // ERRO DE CRÉDITOS
-        // --------------------------------------
-
+        // Créditos
         if (
             error?.status === 402 ||
             error?.code === 402 ||
@@ -499,10 +468,7 @@ app.post("/api/chat", async (req, res) => {
             return res.end();
         }
 
-        // --------------------------------------
-        // ERRO GENÉRICO
-        // --------------------------------------
-
+        // Erro geral
         const message =
             "Não foi possível obter uma resposta da Sarah AI.";
 
@@ -550,7 +516,7 @@ app.listen(PORT, () => {
     );
 
     console.log(
-        "        SARAH AI"
+        "SARAH AI"
     );
 
     console.log(
